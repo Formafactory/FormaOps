@@ -5,10 +5,13 @@
   "description": "FormaOps — clienti Vir3D e De Artis in un posto solo",
   "main": "server.js",
   "type": "commonjs",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "sync:vir3d": "node scripts/sync-vir3d.js"
   },
   "dependencies": {
     "better-sqlite3": "^12.4.1",

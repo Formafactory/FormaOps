@@ -50,4 +50,43 @@
     </form>
   </section>
 </div>
+
+<section class="card orders">
+  <h2>Ordini Vir3D <span class="muted">(<%= orders.length %>)</span></h2>
+  <% reviews.forEach(function (r) { %><p class="error small">Da verificare: <%= r.detail %> (ordine <%= r.ref_id %>)</p><% }) %>
+  <% if (orders.length === 0) { %><p class="muted">Nessun ordine.</p><% } %>
+  <% orders.forEach(function (o) { %>
+    <details class="order">
+      <summary>
+        <strong><%= o.order_number %></strong>
+        <span class="muted"><%= when(o.created_at) %></span>
+        <span class="tag status-<%= o.status %>"><%= STATUS_LABEL[o.status] || o.status %></span>
+        <span class="amount"><%= money(o.total_minor, o.currency) %></span>
+        <span class="muted small"><%= o.items.map(function (i) { return i.quantity + '× ' + i.product_name; }).join(', ') %></span>
+      </summary>
+      <div class="order-body">
+        <table class="mini">
+          <% o.items.forEach(function (i) { %>
+            <tr><td><%= i.quantity %>×</td><td><%= i.product_name %></td>
+              <td class="muted"><%= i.production_status || '' %></td><td class="amount"><%= money(i.total_price_minor, o.currency) %></td></tr>
+          <% }) %>
+          <tr><td></td><td class="muted">Spedizione</td><td></td><td class="amount"><%= money(o.shipping_minor, o.currency) %></td></tr>
+          <% if (o.discount_minor) { %><tr><td></td><td class="muted">Sconto</td><td></td><td class="amount">−<%= money(o.discount_minor, o.currency) %></td></tr><% } %>
+        </table>
+        <p class="small">
+          Pagamento: <%= o.payment_method || '—' %> (<%= o.payment_status || '—' %>)
+          · Tracking: <%= o.tracking_number || '—' %>
+          <% if (o.delivered_at) { %>· Consegnato <%= when(o.delivered_at) %><% } %>
+        </p>
+        <p class="small muted">
+          Dati sull'ordine: <%= o.customer_name || '—' %> · <%= o.customer_email || '—' %> · <%= o.customer_phone || '—' %>
+          · abbinato per <%= o.match_reason || '—' %>
+        </p>
+        <form class="inline-form small" method="post" action="/orders/<%= encodeURIComponent(o.id) %>/move">
+          Sposta su cliente # <input name="customer_id" size="5" required> <button type="submit">Sposta</button>
+        </form>
+      </div>
+    </details>
+  <% }) %>
+</section>
 <%- include('_bottom') %>

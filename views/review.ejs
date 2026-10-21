@@ -1,0 +1,21 @@
+<%- include('_top', { title: 'Da verificare' }) %>
+<h1>Da verificare</h1>
+<p class="muted">Casi che FormaOps non decide da solo. Controlla, correggi se serve, poi segna come risolto.</p>
+<% if (items.length === 0) { %>
+  <p class="empty">Niente da verificare.</p>
+<% } else { %>
+<table class="list">
+  <thead><tr><th>Ordine</th><th>Problema</th><th>Abbinato a</th><th></th></tr></thead>
+  <tbody>
+  <% items.forEach(function (r) { %>
+    <tr>
+      <td><%= r.ref_id %></td>
+      <td><%= r.detail %></td>
+      <td><% if (r.customer_id) { %><a href="/customers/<%= r.customer_id %>"><%= r.customer_name %> (#<%= r.customer_id %>)</a><% } %></td>
+      <td><form method="post" action="/verifica/<%= r.id %>/risolto"><button type="submit">Risolto</button></form></td>
+    </tr>
+  <% }) %>
+  </tbody>
+</table>
+<% } %>
+<%- include('_bottom') %>
