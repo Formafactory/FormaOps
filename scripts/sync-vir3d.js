@@ -9,9 +9,11 @@ if (fs.existsSync(envFile) && typeof process.loadEnvFile === 'function') process
 const { openDatabase, resolveDataDir } = require('../lib/db');
 const vir3d = require('../lib/vir3d');
 const { syncVir3d } = require('../lib/sync-vir3d');
+const { vir3dConfig } = require('../lib/settings');
 
 (async () => {
-  const cfg = vir3d.config();
+  const db = openDatabase(resolveDataDir(process.env.DATA_DIR), { log: () => {} });
+  const cfg = vir3dConfig(db);
   console.log(`[vir3d] collegamento a ${cfg.base}`);
   try {
     const h = await vir3d.health(cfg);
@@ -22,7 +24,6 @@ const { syncVir3d } = require('../lib/sync-vir3d');
   }
   if (process.argv.includes('--check')) return;
 
-  const db = openDatabase(resolveDataDir(process.env.DATA_DIR));
   const r = await syncVir3d(db, { cfg, log: console.log });
   if (!r.ok) {
     console.error(`[vir3d] ERRORE: ${r.error}`);

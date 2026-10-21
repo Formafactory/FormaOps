@@ -1,9 +1,12 @@
 @echo off
 cd /d "%~dp0"
-if not exist node_modules (
-  echo Prima installazione delle dipendenze...
-  call npm install
-)
+echo Controllo aggiornamenti di FormaOps...
+git pull
+echo Installo o aggiorno i componenti...
+call npm install --no-fund --no-audit
 start "" http://localhost:3210
+echo.
+echo FormaOps e' acceso. NON chiudere questa finestra finche' lo usi.
+echo.
 npm start
 pause

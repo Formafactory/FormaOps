@@ -5,7 +5,7 @@
   <div>
     <strong>Ordini Vir3D</strong>
     <% if (!sync.configured) { %>
-      <span class="muted">— non collegato: manca la chiave nel file .env</span>
+      <span class="muted">— non collegato.</span> <a href="/impostazioni">Collega vir3d.it</a>
     <% } else if (sync.state.last_ok_at) { %>
       <span class="muted">— ultimo aggiornamento <%= when(sync.state.last_ok_at) %></span>
     <% } else { %>

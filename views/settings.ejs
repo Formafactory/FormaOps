@@ -1,0 +1,18 @@
+<%- include('_top', { title: 'Impostazioni' }) %>
+<h1>Impostazioni</h1>
+<% if (msg) { %><p class="<%= ok ? 'ok' : 'error' %>"><%= msg %></p><% } %>
+
+<section class="card form">
+  <h2>Collegamento ordini Vir3D</h2>
+  <p class="small">
+    <% if (hasKey) { %>Chiave salvata (termina con <strong>…<%= keyTail %></strong>).<% } else { %>Nessuna chiave salvata.<% } %>
+    La chiave resta solo su questo PC e serve unicamente a <em>leggere</em> gli ordini di vir3d.it.
+  </p>
+  <form class="form" method="post" action="/impostazioni/vir3d">
+    <label>Chiave FormaOps di vir3d.it
+      <input name="key" type="password" autocomplete="off" placeholder="<%= hasKey ? 'lascia vuoto per provare quella salvata' : 'incolla qui la chiave' %>">
+    </label>
+    <div class="actions"><button type="submit">Salva e prova il collegamento</button></div>
+  </form>
+</section>
+<%- include('_bottom') %>

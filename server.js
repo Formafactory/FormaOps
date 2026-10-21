@@ -12,6 +12,7 @@ const { openDatabase, resolveDataDir } = require('./lib/db');
 const C = require('./lib/customers');
 const { syncVir3d, getState } = require('./lib/sync-vir3d');
 const vir3d = require('./lib/vir3d');
+const { setSetting, vir3dConfig } = require('./lib/settings');
 
 const PORT = Number(process.env.PORT) || 3210;
 const DATA_DIR = resolveDataDir(process.env.DATA_DIR);
@@ -45,7 +46,7 @@ app.locals.when = (iso) => {
 function syncInfo() {
   return {
     state: getState(db),
-    configured: Boolean(vir3d.config().key),
+    configured: Boolean(vir3dConfig(db).key),
     reviewOpen: db.prepare('SELECT COUNT(*) FROM review_items WHERE resolved_at IS NULL').pluck().get(),
   };
 }
@@ -59,11 +60,27 @@ app.get('/', (req, res) => {
 });
 
 app.post('/sync/vir3d', async (req, res) => {
-  const r = await syncVir3d(db, { log: console.log });
+  const r = await syncVir3d(db, { cfg: vir3dConfig(db), log: console.log });
   const msg = r.skipped ? 'Sincronizzazione già in corso.'
     : r.ok ? `Ordini Vir3D aggiornati: ${r.nuovi} nuovi, ${r.aggiornati} aggiornati, ${r.clientiNuovi} clienti nuovi.`
       : `Errore: ${r.error}`;
   res.redirect('/?sync=' + encodeURIComponent(msg));
+});
+
+app.get('/impostazioni', (req, res) => {
+  const cfg = vir3dConfig(db);
+  res.render('settings', { hasKey: Boolean(cfg.key), keyTail: cfg.key ? cfg.key.slice(-4) : '', msg: req.query.msg ?? null, ok: req.query.ok === '1' });
+});
+
+app.post('/impostazioni/vir3d', async (req, res) => {
+  const key = String(req.body.key ?? '').trim();
+  if (key) setSetting(db, 'vir3d_api_key', key);
+  try {
+    await vir3d.health(vir3dConfig(db));
+    res.redirect('/impostazioni?ok=1&msg=' + encodeURIComponent('Collegamento a vir3d.it riuscito. Ora vai su Clienti e premi "Aggiorna ordini".'));
+  } catch (err) {
+    res.redirect('/impostazioni?msg=' + encodeURIComponent(err.message));
+  }
 });
 
 app.get('/verifica', (req, res) => {
