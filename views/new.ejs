@@ -1,0 +1,17 @@
+<%- include('_top', { title: 'Nuovo cliente' }) %>
+<h1>Nuovo cliente</h1>
+<% if (error) { %><p class="error"><%= error %></p><% } %>
+<form class="card form" method="post" action="/customers">
+  <label>Nome <input name="name" value="<%= form.name || '' %>" required autofocus></label>
+  <label>Brand
+    <select name="brand">
+      <% BRANDS.forEach(function (b) { %>
+        <option value="<%= b %>" <%= form.brand === b ? 'selected' : '' %>><%= BRAND_LABEL[b] %></option>
+      <% }) %>
+    </select>
+  </label>
+  <label>Email <span class="muted">(facoltativa)</span> <input name="email" type="email" value="<%= form.email || '' %>"></label>
+  <label>Telefono <span class="muted">(facoltativo)</span> <input name="phone" value="<%= form.phone || '' %>"></label>
+  <div class="actions"><button type="submit">Crea cliente</button> <a href="/">Annulla</a></div>
+</form>
+<%- include('_bottom') %>

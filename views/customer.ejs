@@ -1,0 +1,53 @@
+<%- include('_top', { title: customer.name }) %>
+<p><a href="/">&larr; Clienti</a></p>
+<h1><%= customer.name %> <span class="tag tag-<%= customer.brand %>"><%= BRAND_LABEL[customer.brand] %></span></h1>
+<p class="muted">Cliente #<%= customer.id %> · creato <%= customer.created_at.slice(0, 10) %> · aggiornato <%= customer.updated_at.slice(0, 16) %></p>
+
+<% if (error) { %><p class="error"><%= error %></p><% } %>
+<% if (saved) { %><p class="ok">Salvato.</p><% } %>
+
+<div class="grid">
+  <section class="card">
+    <h2>Contatti</h2>
+    <% if (customer.contacts.length === 0) { %><p class="muted">Nessun contatto.</p><% } %>
+    <ul class="contact-list">
+      <% customer.contacts.forEach(function (k) { %>
+        <li>
+          <span class="type"><%= TYPE_LABEL[k.type] %></span>
+          <span class="value"><%= k.value_normalized %></span>
+          <% if (k.value_raw !== k.value_normalized) { %><span class="muted">(<%= k.value_raw %>)</span><% } %>
+          <form method="post" action="/customers/<%= customer.id %>/contacts/<%= k.id %>/delete" class="inline"
+                onsubmit="return confirm('Rimuovere questo contatto?')">
+            <button class="link" type="submit">rimuovi</button>
+          </form>
+        </li>
+      <% }) %>
+    </ul>
+    <form class="add-contact" method="post" action="/customers/<%= customer.id %>/contacts">
+      <select name="type">
+        <% CONTACT_TYPES.forEach(function (t) { %>
+          <option value="<%= t %>" <%= contactForm.type === t ? 'selected' : '' %>><%= TYPE_LABEL[t] %></option>
+        <% }) %>
+      </select>
+      <input name="value" value="<%= contactForm.value || '' %>" placeholder="valore" required>
+      <button type="submit">Aggiungi</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Dati e note</h2>
+    <form class="form" method="post" action="/customers/<%= customer.id %>">
+      <label>Nome <input name="name" value="<%= customer.name %>" required></label>
+      <label>Brand
+        <select name="brand">
+          <% BRANDS.forEach(function (b) { %>
+            <option value="<%= b %>" <%= customer.brand === b ? 'selected' : '' %>><%= BRAND_LABEL[b] %></option>
+          <% }) %>
+        </select>
+      </label>
+      <label>Note <textarea name="notes" rows="8"><%= customer.notes %></textarea></label>
+      <div class="actions"><button type="submit">Salva</button></div>
+    </form>
+  </section>
+</div>
+<%- include('_bottom') %>

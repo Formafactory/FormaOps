@@ -1,0 +1,34 @@
+<%- include('_top', { title: 'Clienti' }) %>
+<h1>Clienti <span class="muted">(<%= total %>)</span></h1>
+
+<form class="search" method="get" action="/">
+  <input type="search" name="q" value="<%= q %>" placeholder="Nome, email, telefono, profilo Instagram/Facebook" autofocus>
+  <select name="brand">
+    <option value="">Tutti i brand</option>
+    <% BRANDS.forEach(function (b) { %>
+      <option value="<%= b %>" <%= brand === b ? 'selected' : '' %>><%= BRAND_LABEL[b] %></option>
+    <% }) %>
+  </select>
+  <button type="submit">Cerca</button>
+  <% if (q || brand) { %><a href="/">Azzera</a><% } %>
+</form>
+
+<% if (customers.length === 0) { %>
+  <p class="empty"><%= q || brand ? 'Nessun cliente trovato.' : 'Ancora nessun cliente.' %>
+    <a href="/customers/new">Crea un cliente</a></p>
+<% } else { %>
+<table class="list">
+  <thead><tr><th>Nome</th><th>Brand</th><th>Contatti</th><th>Aggiornato</th></tr></thead>
+  <tbody>
+  <% customers.forEach(function (c) { %>
+    <tr>
+      <td><a href="/customers/<%= c.id %>"><strong><%= c.name %></strong></a></td>
+      <td><span class="tag tag-<%= c.brand %>"><%= BRAND_LABEL[c.brand] %></span></td>
+      <td class="contacts"><% c.contacts.forEach(function (k) { %><span title="<%= TYPE_LABEL[k.type] %>"><%= k.value_normalized %></span><% }) %></td>
+      <td class="muted"><%= c.updated_at.slice(0, 10) %></td>
+    </tr>
+  <% }) %>
+  </tbody>
+</table>
+<% } %>
+<%- include('_bottom') %>
