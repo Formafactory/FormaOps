@@ -1,0 +1,48 @@
+<%- include('_top', { title: 'Da collegare' }) %>
+<h1>Da collegare</h1>
+<p class="muted">Persone che ti hanno scritto ma che FormaOps non sa a quale cliente associare.
+  Collegale una volta: dal messaggio successivo verranno riconosciute da sole.</p>
+<% if (error) { %><p class="error"><%= error %></p><% } %>
+
+<% if (senders.length === 0) { %>
+  <p class="empty">Niente da collegare.</p>
+<% } %>
+<% senders.forEach(function (s) { %>
+  <section class="card sender" id="<%= encodeURIComponent(s.address) %>">
+    <div class="sender-head">
+      <div>
+        <strong><%= s.name || s.address %></strong> <span class="muted">&lt;<%= s.address %>&gt;</span>
+        <div class="muted small"><%= s.n %> messaggi · ultimo <%= when(s.last_at) %></div>
+        <div class="small"><strong><%= s.last_subject || '(senza oggetto)' %></strong> — <span class="muted"><%= s.last_snippet %></span></div>
+      </div>
+    </div>
+    <div class="sender-actions">
+      <form method="post" action="/da-collegare/crea" class="inline-form">
+        <input type="hidden" name="address" value="<%= s.address %>">
+        <input name="name" value="<%= s.name || '' %>" placeholder="Nome" size="18">
+        <select name="brand">
+          <% BRANDS.forEach(function (b) { %><option value="<%= b %>"><%= BRAND_LABEL[b] %></option><% }) %>
+        </select>
+        <button type="submit">Nuovo cliente</button>
+      </form>
+      <form method="post" action="/da-collegare/collega" class="inline-form">
+        <input type="hidden" name="address" value="<%= s.address %>">
+        <input name="customer_id" list="clienti" size="28" required placeholder="Cerca cliente esistente…"
+          value="<%= s.suggestions.length === 1 ? s.suggestions[0].name + ' (#' + s.suggestions[0].id + ')' : '' %>">
+        <button type="submit">Collega</button>
+        <% if (s.suggestions.length) { %>
+          <span class="small muted">forse: <% s.suggestions.forEach(function (c, i) { %><a href="/customers/<%= c.id %>" target="_blank"><%= c.name %> (#<%= c.id %>)</a><%= i < s.suggestions.length - 1 ? ', ' : '' %><% }) %></span>
+        <% } %>
+      </form>
+      <form method="post" action="/da-collegare/ignora" class="inline-form ignore">
+        <input type="hidden" name="address" value="<%= s.address %>">
+        <select name="scope"><option value="indirizzo">questo indirizzo</option><option value="dominio">tutto <%= s.address.slice(s.address.indexOf('@')) %></option></select>
+        <button type="submit" class="secondary">Ignora</button>
+      </form>
+    </div>
+  </section>
+<% }) %>
+<datalist id="clienti">
+  <% customers.forEach(function (c) { %><option value="<%= c.name %> (#<%= c.id %>)"><%= c.emails || '' %></option><% }) %>
+</datalist>
+<%- include('_bottom') %>

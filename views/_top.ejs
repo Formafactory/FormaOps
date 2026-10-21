@@ -10,8 +10,10 @@
 <header class="bar">
   <a class="logo" href="/">FormaOps</a>
   <nav>
-    <a href="/">Clienti</a>
-    <a href="/verifica">Da verificare</a>
+    <a href="/">Arrivi</a>
+    <a href="/clienti">Clienti</a>
+    <a href="/da-collegare">Da collegare<% if (typeof nav !== 'undefined' && nav.unlinked) { %> <span class="badge"><%= nav.unlinked %></span><% } %></a>
+    <a href="/verifica">Da verificare<% if (typeof nav !== 'undefined' && nav.reviewOpen) { %> <span class="badge"><%= nav.reviewOpen %></span><% } %></a>
     <a href="/impostazioni">Impostazioni</a>
     <a class="btn" href="/customers/new">+ Nuovo cliente</a>
   </nav>

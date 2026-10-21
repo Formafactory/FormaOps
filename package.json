@@ -16,6 +16,10 @@
   "dependencies": {
     "better-sqlite3": "^12.4.1",
     "ejs": "^3.1.10",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "imapflow": "^2.5.9"
+  },
+  "devDependencies": {
+    "hoodiecrow-imap": "^3.3.1"
   }
 }

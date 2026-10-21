@@ -30,23 +30,30 @@ Per spostarla, copia `.env.example` in `.env` e imposta `DATA_DIR`.
 
 ## Collegare gli ordini Vir3D (sola lettura)
 
-1. Copia `.env.example` in `.env` (se non l'hai già fatto).
-2. In `VIR3D_API_KEY=` incolla il valore del segreto `FORMAOPS_READ_API_KEY` del progetto Replit di production (Vir3dDesign).
-3. Verifica il collegamento: `npm run sync:vir3d -- --check`
-4. Importa gli ordini: `npm run sync:vir3d`, oppure il pulsante **Aggiorna ordini** nella pagina Clienti.
+In **Impostazioni** → Ordini Vir3D incolla il valore del segreto `FORMAOPS_READ_API_KEY`
+del progetto Replit di production (Vir3dDesign) e premi **Salva e prova**.
 
 FormaOps legge soltanto: non può modificare nulla su vir3d.it. Gli ordini vengono abbinati ai clienti
 per email, poi per telefono, mai per nome; i casi ambigui finiscono in **Da verificare**.
 Rieseguire la sincronizzazione non crea doppioni e, se si interrompe, riparte da dove era arrivata.
 
+## Collegare Gmail (sola lettura)
+
+In **Impostazioni** → Email: indirizzo Gmail e una *password per le app* di Google (non la password dell'account).
+FormaOps apre la posta in sola lettura: non invia, non cancella, non sposta e non segna come lette le email.
+Al primo collegamento importa gli ultimi 90 giorni (modificabile), escluse Promozioni, Social, Aggiornamenti e Forum.
+
+## Le schermate
+
+- **Arrivi**: conversazioni degli ultimi 30 giorni, con filtro "Da rispondere" (l'ultimo messaggio è del cliente), e ordini degli ultimi 7 giorni. Il pulsante **Aggiorna** legge ordini ed email.
+- **Clienti**: anagrafica con ordini ed email di ciascuno.
+- **Da collegare**: chi ti ha scritto ma non è ancora associato a un cliente. Lo colleghi una volta, poi viene riconosciuto da solo. Newsletter e fornitori si ignorano da qui.
+- **Da verificare**: casi ambigui degli ordini (es. email di un cliente e telefono di un altro).
+
 ## Aggiornare
 
-```
-git pull
-npm install
-```
-
-Poi riavvia. Le modifiche al database si applicano da sole all'avvio.
+Basta riavviare con `avvia-formaops.bat`: scarica da solo gli aggiornamenti e i componenti.
+Le modifiche al database si applicano da sole all'avvio.
 
 ## Verifica
 
@@ -58,4 +65,5 @@ npm test
 
 - Blocco 1 — anagrafica clienti: fatto.
 - Blocco 2 — ordini Vir3D in sola lettura: fatto.
-- Prossimi: Gmail + schermata Arrivi, Meta (DM e commenti), sync automatica e backup.
+- Blocco 3 — Gmail in sola lettura e schermata Arrivi: fatto.
+- Prossimi: Meta (DM e commenti), sync automatica, backup, accesso dal telefono.

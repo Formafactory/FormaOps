@@ -1,0 +1,79 @@
+<%- include('_top', { title: 'Arrivi' }) %>
+<% if (flash) { %><p class="<%= flash.includes('Errore') ? 'error' : 'ok' %>"><%= flash %></p><% } %>
+
+<section class="syncbox">
+  <div class="small">
+    <div><strong>Ordini Vir3D</strong>
+      <% if (!sync.configured) { %><span class="muted">non collegato</span>
+      <% } else { %><span class="muted">aggiornati <%= when(sync.state.last_ok_at) %></span><% } %>
+      <% if (sync.state.last_error) { %><span class="error-text"> · <%= sync.state.last_error %></span><% } %>
+    </div>
+    <div><strong>Email</strong>
+      <% if (!sync.gmailConfigured) { %><span class="muted">non collegata</span>
+      <% } else { %><span class="muted">aggiornata <%= when(sync.gstate.last_ok_at) %></span><% } %>
+      <% if (sync.gstate.last_error) { %><span class="error-text"> · <%= sync.gstate.last_error %></span><% } %>
+    </div>
+    <% if (!sync.configured || !sync.gmailConfigured) { %><div><a href="/impostazioni">Collega i canali in Impostazioni</a></div><% } %>
+  </div>
+  <form method="post" action="/sync" class="inline-form"
+        onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Aggiorno… (può volerci un po\')'">
+    <button type="submit">Aggiorna</button>
+  </form>
+</section>
+
+<% if (recentOrders.length) { %>
+<section class="card">
+  <h2>Ordini degli ultimi 7 giorni <span class="muted">(<%= recentOrders.length %>)</span></h2>
+  <table class="list compact">
+    <% recentOrders.forEach(function (o) { %>
+      <tr>
+        <td class="muted nowrap"><%= when(o.created_at) %></td>
+        <td><strong><%= o.order_number %></strong></td>
+        <td><% if (o.customer_id) { %><a href="/customers/<%= o.customer_id %>"><%= o.customer_name %></a><% } else { %><%= o.customer_name %><% } %></td>
+        <td><span class="tag status-<%= o.status %>"><%= STATUS_LABEL[o.status] || o.status %></span></td>
+        <td class="amount"><%= money(o.total_minor, o.currency) %></td>
+      </tr>
+    <% }) %>
+  </table>
+</section>
+<% } %>
+
+<h1>Messaggi</h1>
+<div class="tabs">
+  <a class="<%= tab === 'rispondere' ? 'active' : '' %>" href="/?tab=rispondere">Da rispondere <span class="badge"><%= toAnswer %></span></a>
+  <a class="<%= tab === 'tutti' ? 'active' : '' %>" href="/?tab=tutti">Tutti (30 giorni)</a>
+</div>
+
+<% if (threads.length === 0) { %>
+  <p class="empty"><%= tab === 'rispondere' ? 'Nessuna conversazione in attesa di risposta.' : 'Nessun messaggio negli ultimi 30 giorni.' %>
+    <% if (!sync.gmailConfigured) { %><a href="/impostazioni">Collega Gmail</a><% } %></p>
+<% } else { %>
+<table class="list threads">
+  <tbody>
+  <% threads.forEach(function (t) { %>
+    <tr class="<%= t.direction === 'in' ? 'waiting' : '' %>">
+      <td class="nowrap muted small"><%= when(t.sent_at) %></td>
+      <td class="who">
+        <% if (t.customer_id) { %>
+          <a href="/customers/<%= t.customer_id %>"><strong><%= t.customer_name %></strong></a>
+          <span class="tag tag-<%= t.customer_brand %>"><%= BRAND_LABEL[t.customer_brand] %></span>
+        <% } else { %>
+          <strong><%= t.counterpart_name || t.counterpart_address %></strong>
+          <a class="small" href="/da-collegare#<%= encodeURIComponent(t.counterpart_address) %>">collega</a>
+        <% } %>
+        <div class="muted small"><%= t.counterpart_address %></div>
+      </td>
+      <td class="msg">
+        <span class="chan">Email</span> <strong><%= t.subject || '(senza oggetto)' %></strong><% if (t.n > 1) { %> <span class="muted small">(<%= t.n %>)</span><% } %>
+        <div class="muted small"><%= t.direction === 'out' ? 'Tu: ' : '' %><%= t.snippet %></div>
+      </td>
+      <td class="nowrap">
+        <% if (t.direction === 'in') { %><span class="tag status-ready_to_ship">Da rispondere</span><% } else { %><span class="tag status-delivered">Risposto</span><% } %>
+        <% if (t.link) { %><div><a class="small" href="<%= t.link %>" target="_blank" rel="noopener">Apri in Gmail ↗</a></div><% } %>
+      </td>
+    </tr>
+  <% }) %>
+  </tbody>
+</table>
+<% } %>
+<%- include('_bottom') %>

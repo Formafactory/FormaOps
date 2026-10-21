@@ -1,7 +1,7 @@
 <%- include('_top', { title: customer.name }) %>
-<p><a href="/">&larr; Clienti</a></p>
+<p><a href="/clienti">&larr; Clienti</a></p>
 <h1><%= customer.name %> <span class="tag tag-<%= customer.brand %>"><%= BRAND_LABEL[customer.brand] %></span></h1>
-<p class="muted">Cliente #<%= customer.id %> · creato <%= customer.created_at.slice(0, 10) %> · aggiornato <%= customer.updated_at.slice(0, 16) %></p>
+<p class="muted">Cliente #<%= customer.id %> · creato <%= when(customer.created_at).split(',')[0] %> · aggiornato <%= when(customer.updated_at) %></p>
 
 <% if (error) { %><p class="error"><%= error %></p><% } %>
 <% if (saved) { %><p class="ok">Salvato.</p><% } %>
@@ -50,6 +50,22 @@
     </form>
   </section>
 </div>
+
+<section class="card orders">
+  <h2>Email <span class="muted">(<%= threads.length %> conversazioni)</span></h2>
+  <% if (threads.length === 0) { %><p class="muted">Nessuna email.</p><% } %>
+  <% threads.forEach(function (t) { %>
+    <div class="order">
+      <div class="thread-line">
+        <span class="muted small nowrap"><%= when(t.sent_at) %></span>
+        <strong><%= t.subject || '(senza oggetto)' %></strong><% if (t.n > 1) { %> <span class="muted small">(<%= t.n %>)</span><% } %>
+        <% if (t.direction === 'in') { %><span class="tag status-ready_to_ship">Da rispondere</span><% } else { %><span class="tag status-delivered">Risposto</span><% } %>
+        <% if (t.link) { %><a class="small" href="<%= t.link %>" target="_blank" rel="noopener">Apri in Gmail ↗</a><% } %>
+      </div>
+      <div class="muted small"><%= t.direction === 'out' ? 'Tu: ' : '' %><%= t.snippet %></div>
+    </div>
+  <% }) %>
+</section>
 
 <section class="card orders">
   <h2>Ordini Vir3D <span class="muted">(<%= orders.length %>)</span></h2>

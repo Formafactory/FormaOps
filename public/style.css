@@ -56,3 +56,33 @@ input, select, textarea { font: inherit; padding: 7px 9px; border: 1px solid var
 .status-shipped, .status-in_transit { background: #e2ecf7; color: #1f4b7a; }
 .status-cancelled { background: #fdecea; color: #b3261e; }
 .status-in_production, .status-quality_check, .status-ready_to_ship { background: #fff3d6; color: #7a5a17; }
+.badge { display: inline-block; min-width: 18px; padding: 0 6px; border-radius: 9px; background: #d4af64; color: #0e0c14; font-size: 12px; font-weight: 700; text-align: center; }
+.tabs { display: flex; gap: 8px; margin: 0 0 12px; }
+.tabs a { padding: 6px 12px; border-radius: 6px; text-decoration: none; color: var(--text); background: var(--card); border: 1px solid var(--line); }
+.tabs a.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.threads td { vertical-align: top; }
+.threads .who { width: 24%; }
+.threads tr.waiting { background: #fffdf6; }
+.chan { font-size: 11px; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+.nowrap { white-space: nowrap; }
+.compact td { padding: 6px 10px; }
+.amount { text-align: right; }
+.error-text { color: var(--err); }
+.sender { margin-bottom: 10px; }
+.sender-actions { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 10px; align-items: center; }
+.sender-actions input, .sender-actions select { padding: 5px 7px; }
+button.secondary { background: #e9e6ef; color: var(--text) !important; }
+.thread-line { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.syncbox .small div { margin: 2px 0; }
+@media (max-width: 700px) {
+  .bar { flex-wrap: wrap; gap: 6px; padding: 10px 16px; }
+  .bar nav { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+  .bar a { margin-left: 0; }
+  main { padding: 16px 16px 48px; }
+  table.list, .list tbody, .list tr, .list td { display: block; width: auto; }
+  .list thead { display: none; }
+  .list tr { padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  .list td { border: 0; padding: 2px 0; text-align: left; }
+  .threads .who { width: auto; }
+  .order .amount { margin-left: 0; }
+}

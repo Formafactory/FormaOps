@@ -2,17 +2,48 @@
 <h1>Impostazioni</h1>
 <% if (msg) { %><p class="<%= ok ? 'ok' : 'error' %>"><%= msg %></p><% } %>
 
-<section class="card form">
-  <h2>Collegamento ordini Vir3D</h2>
+<div class="grid">
+<section class="card">
+  <h2>Ordini Vir3D</h2>
   <p class="small">
     <% if (hasKey) { %>Chiave salvata (termina con <strong>…<%= keyTail %></strong>).<% } else { %>Nessuna chiave salvata.<% } %>
-    La chiave resta solo su questo PC e serve unicamente a <em>leggere</em> gli ordini di vir3d.it.
+    Serve solo a <em>leggere</em> gli ordini di vir3d.it e resta su questo PC.
   </p>
   <form class="form" method="post" action="/impostazioni/vir3d">
     <label>Chiave FormaOps di vir3d.it
       <input name="key" type="password" autocomplete="off" placeholder="<%= hasKey ? 'lascia vuoto per provare quella salvata' : 'incolla qui la chiave' %>">
     </label>
-    <div class="actions"><button type="submit">Salva e prova il collegamento</button></div>
+    <div class="actions"><button type="submit">Salva e prova</button></div>
   </form>
+</section>
+
+<section class="card">
+  <h2>Email (Gmail)</h2>
+  <p class="small">FormaOps legge la posta in <strong>sola lettura</strong>: non invia, non cancella, non sposta
+    e non segna come lette le email. Usa una <em>password per le app</em> di Google, non la password del tuo account.
+    <% if (gmailHasPass) { %><br>Password per le app salvata.<% } %></p>
+  <form class="form" method="post" action="/impostazioni/gmail">
+    <label>Indirizzo Gmail <input name="user" type="email" value="<%= gmailUser %>" placeholder="info.vir3d@gmail.com" required></label>
+    <label>Password per le app (16 lettere)
+      <input name="pass" type="password" autocomplete="off" placeholder="<%= gmailHasPass ? 'lascia vuoto per usare quella salvata' : 'xxxx xxxx xxxx xxxx' %>">
+    </label>
+    <label>Al primo collegamento importa gli ultimi <input name="days" type="number" min="7" max="730" value="<%= gmailDays %>" style="width:90px"> giorni</label>
+    <div class="actions"><button type="submit">Salva e prova</button></div>
+  </form>
+</section>
+</div>
+
+<section class="card" style="margin-top:16px">
+  <h2>Mittenti ignorati</h2>
+  <p class="small muted">Newsletter, notifiche e fornitori che non vuoi vedere negli Arrivi. Si aggiungono da "Da collegare".
+    Gli indirizzi automatici (noreply, notifiche…) sono già esclusi.</p>
+  <% if (!ignored.length) { %><p class="muted small">Nessuno.</p><% } %>
+  <ul class="contact-list">
+    <% ignored.forEach(function (p) { %>
+      <li><span class="value"><%= p %></span>
+        <form method="post" action="/impostazioni/ignorati/rimuovi" class="inline"><input type="hidden" name="pattern" value="<%= p %>"><button class="link" type="submit">rimuovi</button></form>
+      </li>
+    <% }) %>
+  </ul>
 </section>
 <%- include('_bottom') %>

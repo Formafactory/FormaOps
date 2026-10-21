@@ -1,32 +1,10 @@
 <%- include('_top', { title: 'Clienti' }) %>
-<% if (flash) { %><p class="<%= flash.startsWith('Errore') ? 'error' : 'ok' %>"><%= flash %></p><% } %>
 
-<section class="syncbox">
-  <div>
-    <strong>Ordini Vir3D</strong>
-    <% if (!sync.configured) { %>
-      <span class="muted">— non collegato.</span> <a href="/impostazioni">Collega vir3d.it</a>
-    <% } else if (sync.state.last_ok_at) { %>
-      <span class="muted">— ultimo aggiornamento <%= when(sync.state.last_ok_at) %></span>
-    <% } else { %>
-      <span class="muted">— mai sincronizzati</span>
-    <% } %>
-    <% if (sync.state.last_error) { %><div class="error small">Ultimo errore: <%= sync.state.last_error %></div><% } %>
-  </div>
-  <div class="actions">
-    <% if (sync.reviewOpen) { %><a href="/verifica"><%= sync.reviewOpen %> da verificare</a><% } %>
-    <% if (sync.configured) { %>
-      <form method="post" action="/sync/vir3d" class="inline-form"
-            onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Aggiorno…'">
-        <button type="submit">Aggiorna ordini</button>
-      </form>
-    <% } %>
-  </div>
-</section>
+
 
 <h1>Clienti <span class="muted">(<%= total %>)</span></h1>
 
-<form class="search" method="get" action="/">
+<form class="search" method="get" action="/clienti">
   <input type="search" name="q" value="<%= q %>" placeholder="Nome, email, telefono, profilo, numero ordine" autofocus>
   <select name="brand">
     <option value="">Tutti i brand</option>
@@ -35,7 +13,7 @@
     <% }) %>
   </select>
   <button type="submit">Cerca</button>
-  <% if (q || brand) { %><a href="/">Azzera</a><% } %>
+  <% if (q || brand) { %><a href="/clienti">Azzera</a><% } %>
 </form>
 
 <% if (customers.length === 0) { %>
