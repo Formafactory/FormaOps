@@ -27,7 +27,7 @@
     <tr>
       <td><a href="/customers/<%= c.id %>"><strong><%= c.name %></strong></a></td>
       <td><span class="tag tag-<%= c.brand %>"><%= BRAND_LABEL[c.brand] %></span></td>
-      <td class="contacts"><% c.contacts.forEach(function (k) { %><span title="<%= TYPE_LABEL[k.type] %>"><%= k.value_normalized %></span><% }) %></td>
+      <td class="contacts"><% c.contacts.forEach(function (k) { %><span title="<%= TYPE_LABEL[k.type] %>"><%= k.type === 'facebook' ? 'Facebook' : k.type === 'instagram' ? '@' + k.value_normalized : k.value_normalized %></span><% }) %></td>
       <td><%= c.order_count || '' %><% if (c.last_order_at) { %> <span class="muted small">ultimo <%= when(c.last_order_at).split(',')[0] %></span><% } %></td>
       <td class="muted"><%= when(c.updated_at).split(',')[0] %></td>
     </tr>

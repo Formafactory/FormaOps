@@ -10,7 +10,7 @@
   },
   "scripts": {
     "start": "node server.js",
-    "test": "node --test",
+    "test": "node --test --test-timeout=30000",
     "sync:vir3d": "node scripts/sync-vir3d.js"
   },
   "dependencies": {

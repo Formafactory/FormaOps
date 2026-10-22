@@ -43,6 +43,12 @@ In **Impostazioni** → Email: indirizzo Gmail e una *password per le app* di Go
 FormaOps apre la posta in sola lettura: non invia, non cancella, non sposta e non segna come lette le email.
 Al primo collegamento importa gli ultimi 90 giorni (modificabile), escluse Promozioni, Social, Aggiornamenti e Forum.
 
+## Collegare Facebook e Instagram (lettura)
+
+Guida passo passo: [docs/collegare-meta.md](docs/collegare-meta.md). La chiave dell'utente di sistema si incolla in
+**Impostazioni** → Facebook e Instagram. FormaOps legge Messenger, DM Instagram e commenti a post e inserzioni,
+e non usa mai la chiave per rispondere o pubblicare.
+
 ## Le schermate
 
 - **Arrivi**: conversazioni degli ultimi 30 giorni, con filtro "Da rispondere" (l'ultimo messaggio è del cliente), e ordini degli ultimi 7 giorni. Il pulsante **Aggiorna** legge ordini ed email.
@@ -66,4 +72,5 @@ npm test
 - Blocco 1 — anagrafica clienti: fatto.
 - Blocco 2 — ordini Vir3D in sola lettura: fatto.
 - Blocco 3 — Gmail in sola lettura e schermata Arrivi: fatto.
-- Prossimi: Meta (DM e commenti), sync automatica, backup, accesso dal telefono.
+- Blocco 4 — Facebook e Instagram (DM e commenti, anche inserzioni), filtri email: fatto.
+- Prossimo: sync automatica, backup, accesso dal telefono.

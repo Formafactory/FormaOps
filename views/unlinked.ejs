@@ -8,25 +8,27 @@
   <p class="empty">Niente da collegare.</p>
 <% } %>
 <% senders.forEach(function (s) { %>
-  <section class="card sender" id="<%= encodeURIComponent(s.address) %>">
+  <section class="card sender" id="<%= encodeURIComponent(s.type + ':' + s.address) %>">
     <div class="sender-head">
       <div>
-        <strong><%= s.name || s.address %></strong> <span class="muted">&lt;<%= s.address %>&gt;</span>
-        <div class="muted small"><%= s.n %> messaggi · ultimo <%= when(s.last_at) %></div>
+        <span class="chan chan-<%= s.last_source %>"><%= SOURCE_LABEL[s.last_source] || '' %></span>
+        <strong><%= s.name || displayAddress(s.type, s.address) %></strong>
+        <% if (s.type !== 'facebook') { %><span class="muted"><%= s.type === 'email' ? '<' + s.address + '>' : '@' + s.address %></span><% } %>
+        <div class="muted small"><%= s.n %> <%= s.n === 1 ? 'messaggio' : 'messaggi' %> · ultimo <%= when(s.last_at) %></div>
         <div class="small"><strong><%= s.last_subject || '(senza oggetto)' %></strong> — <span class="muted"><%= s.last_snippet %></span></div>
       </div>
     </div>
     <div class="sender-actions">
       <form method="post" action="/da-collegare/crea" class="inline-form">
-        <input type="hidden" name="address" value="<%= s.address %>">
-        <input name="name" value="<%= s.name || '' %>" placeholder="Nome" size="18">
+        <input type="hidden" name="address" value="<%= s.address %>"><input type="hidden" name="type" value="<%= s.type %>">
+        <input name="name" value="<%= s.name || (s.type === 'instagram' ? '@' + s.address : '') %>" placeholder="Nome" size="18">
         <select name="brand">
-          <% BRANDS.forEach(function (b) { %><option value="<%= b %>"><%= BRAND_LABEL[b] %></option><% }) %>
+          <% BRANDS.forEach(function (b) { %><option value="<%= b %>" <%= (s.deartis_hint ? 'deartis' : 'vir3d') === b ? 'selected' : '' %>><%= BRAND_LABEL[b] %></option><% }) %>
         </select>
         <button type="submit">Nuovo cliente</button>
       </form>
       <form method="post" action="/da-collegare/collega" class="inline-form">
-        <input type="hidden" name="address" value="<%= s.address %>">
+        <input type="hidden" name="address" value="<%= s.address %>"><input type="hidden" name="type" value="<%= s.type %>">
         <input name="customer_id" list="clienti" size="28" required placeholder="Cerca cliente esistente…"
           value="<%= s.suggestions.length === 1 ? s.suggestions[0].name + ' (#' + s.suggestions[0].id + ')' : '' %>">
         <button type="submit">Collega</button>
@@ -35,8 +37,8 @@
         <% } %>
       </form>
       <form method="post" action="/da-collegare/ignora" class="inline-form ignore">
-        <input type="hidden" name="address" value="<%= s.address %>">
-        <select name="scope"><option value="indirizzo">questo indirizzo</option><option value="dominio">tutto <%= s.address.slice(s.address.indexOf('@')) %></option></select>
+        <input type="hidden" name="address" value="<%= s.address %>"><input type="hidden" name="type" value="<%= s.type %>">
+        <% if (s.type === 'email') { %><select name="scope"><option value="indirizzo">questo indirizzo</option><option value="dominio">tutto <%= s.address.slice(s.address.indexOf('@')) %></option></select><% } %>
         <button type="submit" class="secondary">Ignora</button>
       </form>
     </div>

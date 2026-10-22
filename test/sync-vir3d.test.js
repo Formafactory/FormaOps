@@ -29,8 +29,9 @@ function scenario() {
   ];
 }
 
-async function setup() {
+async function setup(t) {
   const fake = await startFake({ orders: scenario() });
+  t.after(() => fake.close());
   const db = freshDb();
   // Clienti già inseriti a mano prima della sync
   C.createCustomer(db, { name: 'Luca Bianchi', brand: 'deartis', phone: '333 222 2222' });
@@ -39,18 +40,17 @@ async function setup() {
   return { fake, db, cfg };
 }
 
-test('chiave sbagliata: errore chiaro, niente scritto', async () => {
-  const { fake, db } = await setup();
+test('chiave sbagliata: errore chiaro, niente scritto', async (t) => {
+  const { fake, db } = await setup(t);
   await assert.rejects(vir3d.health({ base: fake.base, key: 'sbagliata' }), /rifiutato la chiave/);
   const r = await syncVir3d(db, { cfg: { base: fake.base, key: 'sbagliata' } });
   assert.equal(r.ok, false);
   assert.equal(count(db, 'SELECT COUNT(*) FROM orders'), 0);
   assert.match(count(db, 'SELECT last_error FROM sync_state'), /chiave/);
-  await fake.close();
 });
 
-test('prima sync: tutti gli ordini, abbinamenti corretti, conflitto segnalato', async () => {
-  const { fake, db, cfg } = await setup();
+test('prima sync: tutti gli ordini, abbinamenti corretti, conflitto segnalato', async (t) => {
+  const { fake, db, cfg } = await setup(t);
   const r = await syncVir3d(db, { cfg, pageSize: 2 });
   assert.equal(r.ok, true);
   assert.equal(r.pagine, 3);
@@ -74,11 +74,10 @@ test('prima sync: tutti gli ordini, abbinamenti corretti, conflitto segnalato', 
   assert.equal(count(db, `SELECT name FROM customers WHERE id = ?`, ospite), 'Ospite senza contatti');
 
   assert.equal(count(db, 'SELECT COUNT(*) FROM customers'), 4, '2 esistenti + Anna + ospite');
-  await fake.close();
 });
 
-test('rieseguire non duplica; un ordine modificato viene aggiornato', async () => {
-  const { fake, db, cfg } = await setup();
+test('rieseguire non duplica; un ordine modificato viene aggiornato', async (t) => {
+  const { fake, db, cfg } = await setup(t);
   await syncVir3d(db, { cfg, pageSize: 2 });
   const again = await syncVir3d(db, { cfg, pageSize: 2 });
   assert.equal(again.ok, true);
@@ -95,11 +94,10 @@ test('rieseguire non duplica; un ordine modificato viene aggiornato', async () =
   assert.equal(count(db, `SELECT tracking_number FROM orders WHERE id = 'o1'`), 'TRK123');
   assert.equal(count(db, 'SELECT COUNT(*) FROM orders'), 6);
   assert.equal(count(db, 'SELECT COUNT(*) FROM order_items'), 6);
-  await fake.close();
 });
 
-test('interruzione a metà: riprende dal cursore senza perdite né doppioni', async () => {
-  const { fake, db, cfg } = await setup();
+test('interruzione a metà: riprende dal cursore senza perdite né doppioni', async (t) => {
+  const { fake, db, cfg } = await setup(t);
   fake.state.failOnRequest = 2;
   const broken = await syncVir3d(db, { cfg, pageSize: 2 });
   assert.equal(broken.ok, false);
@@ -109,21 +107,19 @@ test('interruzione a metà: riprende dal cursore senza perdite né doppioni', as
   assert.equal(resumed.nuovi, 4);
   assert.equal(count(db, 'SELECT COUNT(*) FROM orders'), 6);
   assert.equal(count(db, 'SELECT last_error FROM sync_state'), null);
-  await fake.close();
 });
 
-test('schema inatteso: niente scritto', async () => {
-  const { fake, db, cfg } = await setup();
+test('schema inatteso: niente scritto', async (t) => {
+  const { fake, db, cfg } = await setup(t);
   fake.state.schemaVersion = '2';
   const r = await syncVir3d(db, { cfg });
   assert.equal(r.ok, false);
   assert.match(r.error, /schema/);
   assert.equal(count(db, 'SELECT COUNT(*) FROM orders'), 0);
-  await fake.close();
 });
 
-test('un ordine spostato a mano resta dove lo hai messo dopo una nuova sync', async () => {
-  const { fake, db, cfg } = await setup();
+test('un ordine spostato a mano resta dove lo hai messo dopo una nuova sync', async (t) => {
+  const { fake, db, cfg } = await setup(t);
   await syncVir3d(db, { cfg });
   db.prepare(`UPDATE orders SET customer_id = 1, match_reason = 'manuale' WHERE id = 'o4'`).run();
   const o4 = fake.state.orders.find((o) => o.orderId === 'o4');
@@ -131,12 +127,10 @@ test('un ordine spostato a mano resta dove lo hai messo dopo una nuova sync', as
   await syncVir3d(db, { cfg });
   assert.equal(count(db, `SELECT customer_id FROM orders WHERE id = 'o4'`), 1);
   assert.equal(count(db, `SELECT status FROM orders WHERE id = 'o4'`), 'delivered');
-  await fake.close();
 });
 
-test('la ricerca trova un cliente dal numero d\'ordine', async () => {
-  const { fake, db, cfg } = await setup();
+test('la ricerca trova un cliente dal numero d\'ordine', async (t) => {
+  const { fake, db, cfg } = await setup(t);
   await syncVir3d(db, { cfg });
   assert.deepEqual(C.searchCustomers(db, 'VIR3D-3').map((c) => c.name), ['Luca Bianchi']);
-  await fake.close();
 });

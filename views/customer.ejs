@@ -14,8 +14,8 @@
       <% customer.contacts.forEach(function (k) { %>
         <li>
           <span class="type"><%= TYPE_LABEL[k.type] %></span>
-          <span class="value"><%= k.value_normalized %></span>
-          <% if (k.value_raw !== k.value_normalized) { %><span class="muted">(<%= k.value_raw %>)</span><% } %>
+          <span class="value"><%= k.type === 'facebook' && k.value_normalized.startsWith('fb:') ? (k.value_raw.startsWith('fb:') ? 'profilo collegato' : k.value_raw) : k.value_normalized %></span>
+          <% if (k.value_raw !== k.value_normalized && !(k.type === 'facebook' && k.value_normalized.startsWith('fb:'))) { %><span class="muted">(<%= k.value_raw %>)</span><% } %>
           <form method="post" action="/customers/<%= customer.id %>/contacts/<%= k.id %>/delete" class="inline"
                 onsubmit="return confirm('Rimuovere questo contatto?')">
             <button class="link" type="submit">rimuovi</button>
@@ -52,15 +52,16 @@
 </div>
 
 <section class="card orders">
-  <h2>Email <span class="muted">(<%= threads.length %> conversazioni)</span></h2>
-  <% if (threads.length === 0) { %><p class="muted">Nessuna email.</p><% } %>
+  <h2>Messaggi e commenti <span class="muted">(<%= threads.length %> conversazioni)</span></h2>
+  <% if (threads.length === 0) { %><p class="muted">Nessun messaggio.</p><% } %>
   <% threads.forEach(function (t) { %>
     <div class="order">
       <div class="thread-line">
         <span class="muted small nowrap"><%= when(t.sent_at) %></span>
+        <span class="chan chan-<%= t.source %>"><%= SOURCE_LABEL[t.source] || t.source %></span>
         <strong><%= t.subject || '(senza oggetto)' %></strong><% if (t.n > 1) { %> <span class="muted small">(<%= t.n %>)</span><% } %>
         <% if (t.direction === 'in') { %><span class="tag status-ready_to_ship">Da rispondere</span><% } else { %><span class="tag status-delivered">Risposto</span><% } %>
-        <% if (t.link) { %><a class="small" href="<%= t.link %>" target="_blank" rel="noopener">Apri in Gmail ↗</a><% } %>
+        <% if (t.link) { %><a class="small" href="<%= t.link %>" target="_blank" rel="noopener"><%= OPEN_LABEL[t.source] || 'Apri' %> ↗</a><% } %>
       </div>
       <div class="muted small"><%= t.direction === 'out' ? 'Tu: ' : '' %><%= t.snippet %></div>
     </div>

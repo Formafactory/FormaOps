@@ -35,15 +35,16 @@ function mailbox() {
   ];
 }
 
-async function setup() {
+async function setup(t) {
   const fake = await startFakeGmail(mailbox());
+  t.after(() => fake.close());
   const db = freshDb();
   C.createCustomer(db, { name: 'Anna Verdi', brand: 'vir3d', email: 'anna@example.it' });
   return { fake, db };
 }
 
-test('prima sync: legge gli ultimi N giorni, abbina, salta notifiche, riconosce le risposte', async () => {
-  const { fake, db } = await setup();
+test('prima sync: legge gli ultimi N giorni, abbina, salta notifiche, riconosce le risposte', async (t) => {
+  const { fake, db } = await setup(t);
   const r = await syncGmail(db, { cfg: fake.cfg, now: NOW });
   assert.equal(r.ok, true, r.error);
   assert.equal(r.letti, 4, 'il messaggio di 60 giorni fa è escluso');
@@ -63,11 +64,10 @@ test('prima sync: legge gli ultimi N giorni, abbina, salta notifiche, riconosce 
 
   const convs = M.conversations(db, { onlyToAnswer: true });
   assert.deepEqual(convs.map((c) => c.counterpart_address), ['info@studiorossi.it'], 'Anna ha già avuto risposta');
-  await fake.close();
 });
 
-test('sola lettura: nessun messaggio viene segnato come letto o modificato', async () => {
-  const { fake, db } = await setup();
+test('sola lettura: nessun messaggio viene segnato come letto o modificato', async (t) => {
+  const { fake, db } = await setup(t);
   await syncGmail(db, { cfg: fake.cfg, now: NOW });
   const c = new ImapFlow({ host: '127.0.0.1', port: fake.port, secure: false, auth: { user: 'testuser', pass: 'testpass' }, logger: false });
   await c.connect();
@@ -77,7 +77,6 @@ test('sola lettura: nessun messaggio viene segnato come letto o modificato', asy
   await c.logout();
   assert.equal(all.length, 5, 'nessun messaggio spostato o cancellato');
   assert.ok(all.every((m) => m.flags.size === 0), 'nessun flag cambiato (nemmeno "letto")');
-  await fake.close();
 });
 
 test('il codice Gmail non usa comandi che modificano la posta', () => {
@@ -89,8 +88,8 @@ test('il codice Gmail non usa comandi che modificano la posta', () => {
   assert.match(src, /readOnly: true/);
 });
 
-test('rieseguire non duplica; un nuovo messaggio arriva da solo', async () => {
-  const { fake, db } = await setup();
+test('rieseguire non duplica; un nuovo messaggio arriva da solo', async (t) => {
+  const { fake, db } = await setup(t);
   await syncGmail(db, { cfg: fake.cfg, now: NOW });
   const again = await syncGmail(db, { cfg: fake.cfg, now: NOW });
   assert.equal(again.ok, true);
@@ -111,11 +110,10 @@ test('rieseguire non duplica; un nuovo messaggio arriva da solo', async () => {
   assert.equal(inc.nuovi, 1);
   const convs = M.conversations(db, { onlyToAnswer: true }).map((x) => x.counterpart_address).sort();
   assert.deepEqual(convs, ['anna@example.it', 'info@studiorossi.it'], 'Anna ha riscritto: torna da rispondere');
-  await fake.close();
 });
 
-test('collegare un mittente: i suoi messaggi passano al cliente; ignorare un dominio li toglie', async () => {
-  const { fake, db } = await setup();
+test('collegare un mittente: i suoi messaggi passano al cliente; ignorare un dominio li toglie', async (t) => {
+  const { fake, db } = await setup(t);
   await syncGmail(db, { cfg: fake.cfg, now: NOW });
   assert.deepEqual(M.unlinkedSenders(db).map((s) => s.address), ['info@studiorossi.it']);
 
@@ -128,10 +126,9 @@ test('collegare un mittente: i suoi messaggi passano al cliente; ignorare un dom
   // Un nuovo mittente sconosciuto, poi ignorato per dominio
   db.prepare(`INSERT INTO messages (id, source, thread_key, direction, counterpart_address, sent_at)
               VALUES ('x', 'gmail', 'gmail:x', 'in', 'promo@fornitore.it', ?)`).run(day(0));
-  M.ignoreSender(db, '@fornitore.it');
+  M.ignoreSender(db, { type: 'email', value: 'promo@fornitore.it', scope: 'dominio' });
   assert.equal(one(db, `SELECT COUNT(*) FROM messages WHERE counterpart_address = 'promo@fornitore.it'`), 0);
   assert.equal(M.isIgnored(db, 'altro@fornitore.it'), true);
-  await fake.close();
 });
 
 test('credenziali sbagliate o server irraggiungibile: errore chiaro', async () => {
@@ -141,4 +138,25 @@ test('credenziali sbagliate o server irraggiungibile: errore chiaro', async () =
   assert.match(r.error, /Gmail/);
   const r2 = await syncGmail(db, { cfg: { user: '', pass: '', days: 30 }, now: NOW });
   assert.match(r2.error, /Impostazioni/);
+});
+
+test('newsletter e notifiche automatiche scartate, salvo che il mittente sia già cliente', async (t) => {
+  const fake = await startFakeGmail([
+    msg({ from: 'Fornitore PLA <news@filamenti.it>', subject: 'Offerte', id: 'n1@x', date: day(1), body: 'Sconti',
+      extra: ['List-Unsubscribe: <mailto:unsub@filamenti.it>'] }),
+    msg({ from: 'Shop <ordini@negozio.it>', subject: 'Il tuo ordine', id: 'n2@x', date: day(1), body: 'Spedito',
+      extra: ['Auto-Submitted: auto-generated'] }),
+    msg({ from: 'Mailing <x@lista.it>', subject: 'Lista', id: 'n3@x', date: day(1), body: 'Lista', extra: ['Precedence: bulk'] }),
+    msg({ from: 'Anna <anna@example.it>', subject: 'Newsletter di Anna', id: 'n4@x', date: day(1), body: 'Ciao',
+      extra: ['List-Id: <anna.lista>'] }),
+    msg({ from: 'Persona <p@privato.it>', subject: 'Domanda', id: 'n5@x', date: day(1), body: 'Vorrei info',
+      extra: ['Auto-Submitted: no'] }),
+  ]);
+  t.after(() => fake.close());
+  const db = freshDb();
+  C.createCustomer(db, { name: 'Anna Verdi', brand: 'vir3d', email: 'anna@example.it' });
+  const r = await syncGmail(db, { cfg: fake.cfg, now: NOW });
+  assert.equal(r.ok, true, r.error);
+  const got = db.prepare('SELECT counterpart_address FROM messages ORDER BY counterpart_address').pluck().all();
+  assert.deepEqual(got, ['anna@example.it', 'p@privato.it']);
 });

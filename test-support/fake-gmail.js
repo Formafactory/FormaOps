@@ -4,11 +4,12 @@ const hoodiecrow = require('hoodiecrow-imap');
 
 const OWN = 'info.vir3d@gmail.com';
 
-function raw({ from, to = OWN, subject, id, inReplyTo, body, date, html = false }) {
+function raw({ from, to = OWN, subject, id, inReplyTo, body, date, html = false, extra = [] }) {
   const h = [
     `From: ${from}`, `To: ${to}`, `Subject: ${subject}`, `Message-ID: <${id}>`,
     `Date: ${new Date(date).toUTCString()}`,
   ];
+  h.push(...extra);
   if (inReplyTo) h.push(`In-Reply-To: <${inReplyTo}>`, `References: <${inReplyTo}>`);
   h.push(`Content-Type: text/${html ? 'html' : 'plain'}; charset=utf-8`, 'Content-Transfer-Encoding: quoted-printable');
   return h.join('\r\n') + '\r\n\r\n' + body + '\r\n';

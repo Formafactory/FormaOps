@@ -86,3 +86,8 @@ button.secondary { background: #e9e6ef; color: var(--text) !important; }
   .threads .who { width: auto; }
   .order .amount { margin-left: 0; }
 }
+.chan-messenger { color: #0866ff; border-color: #b9d1ff; }
+.chan-instagram, .chan-instagram_comment { color: #c13584; border-color: #f0c2dc; }
+.chan-facebook_comment { color: #1f4b7a; border-color: #c5d6ea; }
+.tabs .inline-form select { padding: 6px 8px; }
+.error ul { margin: 4px 0 0 16px; padding: 0; }

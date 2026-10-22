@@ -14,6 +14,7 @@ const { syncVir3d, getState } = require('./lib/sync-vir3d');
 const vir3d = require('./lib/vir3d');
 const { getSetting, setSetting, vir3dConfig } = require('./lib/settings');
 const { syncGmail, gmailConfig, testConnection } = require('./lib/sync-gmail');
+const { syncMeta, metaConfig, testConnection: testMeta } = require('./lib/sync-meta');
 const M = require('./lib/messages');
 const { normalizeEmail } = require('./lib/normalize');
 
@@ -46,15 +47,24 @@ app.locals.when = (iso) => {
   return isNaN(d) ? iso : d.toLocaleString('it-IT', { timeZone: 'Europe/Rome', dateStyle: 'short', timeStyle: 'short' });
 };
 
+app.locals.SOURCE_LABEL = M.SOURCE_LABEL;
+app.locals.displayAddress = M.displayAddress;
+app.locals.OPEN_LABEL = { gmail: 'Apri in Gmail', messenger: 'Apri in Meta', instagram: 'Apri in Meta',
+  facebook_comment: 'Apri il commento', instagram_comment: 'Apri il post' };
+
 function syncInfo() {
   const gstate = db.prepare(`SELECT * FROM sync_state WHERE source = 'gmail'`).get() || {};
+  const mstate = db.prepare(`SELECT * FROM sync_state WHERE source = 'meta'`).get() || {};
   return {
     state: getState(db),
     gstate,
     configured: Boolean(vir3dConfig(db).key),
     gmailConfigured: Boolean(gmailConfig(db).user && gmailConfig(db).pass),
+    mstate,
+    metaConfigured: Boolean(metaConfig(db).token),
     reviewOpen: db.prepare('SELECT COUNT(*) FROM review_items WHERE resolved_at IS NULL').pluck().get(),
-    unlinked: db.prepare('SELECT COUNT(DISTINCT counterpart_address) FROM messages WHERE customer_id IS NULL').pluck().get(),
+    unlinked: db.prepare(`SELECT COUNT(*) FROM (SELECT 1 FROM messages WHERE customer_id IS NULL AND direction = 'in'
+                          GROUP BY contact_type, counterpart_address)`).pluck().get(),
   };
 }
 app.use((req, res, next) => { res.locals.nav = syncInfo(); next(); });
@@ -63,12 +73,13 @@ app.use((req, res, next) => { res.locals.nav = syncInfo(); next(); });
 app.get('/', (req, res) => {
   const tab = req.query.tab === 'tutti' ? 'tutti' : 'rispondere';
   const sinceIso = new Date(Date.now() - 30 * 86400000).toISOString();
-  const threads = M.conversations(db, { sinceIso, onlyToAnswer: tab === 'rispondere' });
+  const source = Object.keys(M.SOURCE_LABEL).includes(req.query.canale) ? req.query.canale : undefined;
+  const threads = M.conversations(db, { sinceIso, onlyToAnswer: tab === 'rispondere', source });
   const toAnswer = M.conversations(db, { sinceIso, onlyToAnswer: true }).length;
   const recentOrders = db.prepare(`
     SELECT o.*, c.name AS customer_name FROM orders o LEFT JOIN customers c ON c.id = o.customer_id
     WHERE o.created_at >= ? ORDER BY o.created_at DESC LIMIT 20`).all(new Date(Date.now() - 7 * 86400000).toISOString());
-  res.render('arrivals', { tab, threads, toAnswer, recentOrders, sync: syncInfo(), flash: req.query.sync ?? null });
+  res.render('arrivals', { tab, source, threads, toAnswer, recentOrders, sync: syncInfo(), flash: req.query.sync ?? null });
 });
 
 app.get('/clienti', (req, res) => {
@@ -92,6 +103,13 @@ async function syncAll() {
     const r = await syncGmail(db, { cfg: g, log: console.log });
     parts.push(r.skipped ? 'Email: già in corso' : r.ok ? `Email: ${r.nuovi} nuove` : `Errore email: ${r.error}`);
   }
+  const mc = metaConfig(db);
+  if (mc.token) {
+    const r = await syncMeta(db, { cfg: mc, log: console.log });
+    parts.push(r.skipped ? 'Facebook/Instagram: già in corso'
+      : r.ok ? `Facebook/Instagram: ${r.nuovi} nuovi${r.warnings.length ? ` (${r.warnings.length} avvisi in Impostazioni)` : ''}`
+        : `Errore Facebook/Instagram: ${r.error}`);
+  }
   if (!parts.length) parts.push('Errore: nessun canale collegato. Vai in Impostazioni.');
   return parts.join(' · ');
 }
@@ -107,13 +125,20 @@ app.get('/da-collegare', (req, res) => {
   res.render('unlinked', { senders: M.unlinkedSenders(db), customers, error: req.query.err ?? null, BRANDS: C.BRANDS });
 });
 
+const SENDER_TYPES = ['email', 'instagram', 'facebook'];
+function senderFrom(body) {
+  const type = SENDER_TYPES.includes(body.type) ? body.type : 'email';
+  const value = type === 'email' ? normalizeEmail(body.address) : String(body.address ?? '').trim();
+  return { type, value };
+}
+
 app.post('/da-collegare/collega', (req, res) => {
-  const address = normalizeEmail(req.body.address);
+  const { type, value } = senderFrom(req.body);
   const raw = String(req.body.customer_id ?? '');
   const target = Number((raw.match(/#(\d+)\)?\s*$/) || raw.match(/^\s*(\d+)\s*$/) || [])[1]);
   try {
     if (!C.getCustomer(db, target)) throw new C.UserError(`Scegli un cliente dall'elenco (non trovato: "${raw}").`);
-    C.addContact(db, target, 'email', address);
+    C.addContact(db, target, type, value);
     M.linkUnmatched(db);
     res.redirect('/da-collegare');
   } catch (err) {
@@ -123,8 +148,14 @@ app.post('/da-collegare/collega', (req, res) => {
 });
 
 app.post('/da-collegare/crea', (req, res) => {
+  const { type, value } = senderFrom(req.body);
   try {
-    const id = C.createCustomer(db, { name: req.body.name || req.body.address, brand: req.body.brand, email: req.body.address });
+    const name = String(req.body.name || '').trim() || M.displayAddress(type, value);
+    const id = db.transaction(() => {
+      const newId = C.createCustomer(db, { name, brand: req.body.brand, email: type === 'email' ? value : '' });
+      if (type !== 'email') C.addContact(db, newId, type, value);
+      return newId;
+    })();
     M.linkUnmatched(db);
     res.redirect(req.body.open ? `/customers/${id}` : '/da-collegare');
   } catch (err) {
@@ -134,9 +165,8 @@ app.post('/da-collegare/crea', (req, res) => {
 });
 
 app.post('/da-collegare/ignora', (req, res) => {
-  const address = normalizeEmail(req.body.address);
-  const pattern = req.body.scope === 'dominio' ? address.slice(address.indexOf('@')) : address;
-  M.ignoreSender(db, pattern);
+  const { type, value } = senderFrom(req.body);
+  M.ignoreSender(db, { type, value, scope: req.body.scope });
   res.redirect('/da-collegare');
 });
 
@@ -147,6 +177,9 @@ app.get('/impostazioni', (req, res) => {
   res.render('settings', {
     hasKey: Boolean(cfg.key), keyTail: cfg.key ? cfg.key.slice(-4) : '',
     gmailUser: g.user, gmailHasPass: Boolean(g.pass), gmailDays: g.days, ignored,
+    metaHasToken: Boolean(metaConfig(db).token),
+    metaPages: JSON.parse(getSetting(db, 'meta_pages') || '[]'),
+    metaWarnings: JSON.parse(getSetting(db, 'meta_warnings') || '[]'),
     msg: req.query.msg ?? null, ok: req.query.ok === '1',
   });
 });
@@ -173,6 +206,20 @@ app.post('/impostazioni/gmail', async (req, res) => {
     const info = await testConnection(gmailConfig(db));
     res.redirect('/impostazioni?ok=1&msg=' + encodeURIComponent(
       `Gmail collegato in sola lettura (${info.exists} messaggi in "${info.path}"). Ora vai su Arrivi e premi "Aggiorna": la prima volta può richiedere qualche minuto.`));
+  } catch (err) {
+    res.redirect('/impostazioni?msg=' + encodeURIComponent(err.message));
+  }
+});
+
+app.post('/impostazioni/meta', async (req, res) => {
+  const token = String(req.body.token ?? '').replace(/\s+/g, '');
+  if (token) setSetting(db, 'meta_token', token);
+  try {
+    const pages = await testMeta(metaConfig(db));
+    setSetting(db, 'meta_pages', JSON.stringify(pages));
+    const names = pages.map((p) => p.name + (p.instagram ? ` (Instagram @${p.instagram})` : ' (senza Instagram)')).join(', ');
+    res.redirect('/impostazioni?ok=1&msg=' + encodeURIComponent(
+      `Facebook e Instagram collegati in lettura: ${names}. Ora vai su Arrivi e premi "Aggiorna".`));
   } catch (err) {
     res.redirect('/impostazioni?msg=' + encodeURIComponent(err.message));
   }

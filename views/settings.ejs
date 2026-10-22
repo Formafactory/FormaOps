@@ -34,13 +34,31 @@
 </div>
 
 <section class="card" style="margin-top:16px">
+  <h2>Facebook e Instagram</h2>
+  <p class="small">FormaOps <strong>legge soltanto</strong> messaggi di Messenger, DM di Instagram e commenti ai post e alle inserzioni.
+    Non risponde e non pubblica nulla. Serve la chiave dell'<em>utente di sistema</em> creato nel tuo portfolio Meta Business:
+    trattala come una password, resta solo su questo PC e puoi revocarla da Meta quando vuoi.</p>
+  <% if (metaHasToken) { %><p class="small">Chiave salvata.
+    <% if (metaPages.length) { %>Pagine collegate: <% metaPages.forEach(function (p, i) { %><strong><%= p.name %></strong><%= p.instagram ? ' (Instagram @' + p.instagram + ')' : ' (senza Instagram)' %><%= i < metaPages.length - 1 ? ', ' : '' %><% }) %>.<% } %></p><% } %>
+  <% if (metaWarnings.length) { %>
+    <div class="error small"><strong>Avvisi dell'ultimo aggiornamento:</strong><ul><% metaWarnings.forEach(function (w) { %><li><%= w %></li><% }) %></ul></div>
+  <% } %>
+  <form class="form" method="post" action="/impostazioni/meta">
+    <label>Chiave dell'utente di sistema Meta
+      <input name="token" type="password" autocomplete="off" placeholder="<%= metaHasToken ? 'lascia vuoto per provare quella salvata' : 'incolla qui la chiave' %>">
+    </label>
+    <div class="actions"><button type="submit">Salva e prova</button></div>
+  </form>
+</section>
+
+<section class="card" style="margin-top:16px">
   <h2>Mittenti ignorati</h2>
   <p class="small muted">Newsletter, notifiche e fornitori che non vuoi vedere negli Arrivi. Si aggiungono da "Da collegare".
     Gli indirizzi automatici (noreply, notifiche…) sono già esclusi.</p>
   <% if (!ignored.length) { %><p class="muted small">Nessuno.</p><% } %>
   <ul class="contact-list">
     <% ignored.forEach(function (p) { %>
-      <li><span class="value"><%= p %></span>
+      <li><span class="value"><%= p.startsWith('instagram:') ? 'Instagram @' + p.slice(10) : p.startsWith('facebook:') ? 'Profilo Facebook ' + p.slice(12) : p %></span>
         <form method="post" action="/impostazioni/ignorati/rimuovi" class="inline"><input type="hidden" name="pattern" value="<%= p %>"><button class="link" type="submit">rimuovi</button></form>
       </li>
     <% }) %>
