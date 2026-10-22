@@ -5,7 +5,10 @@ commenti ai post e alle inserzioni. Non risponde e non pubblica nulla.
 
 ## 1. Instagram: consenti l'accesso ai messaggi
 Per ciascun account Instagram (Vir3D e De Artis), dall'app Instagram sul telefono:
-Impostazioni → Messaggi e risposte alle storie → Strumenti collegati → attiva **Consenti l'accesso ai messaggi**.
+Profilo → menu ☰ → **Impostazioni e privacy** → **Messaggi e risposte alle storie** → **Controlli dei messaggi**
+→ in fondo **Strumenti collegati** → attiva **Consenti l'accesso ai messaggi**.
+L'opzione compare solo sugli account professionali (aziendali o creator) e solo nell'app per telefono.
+Se non c'è, prosegui: il primo aggiornamento di FormaOps mostrerà un avviso e si sistema dopo.
 
 ## 2. Crea l'app "FormaOps" (privata)
 1. Apri developers.facebook.com → **Le mie app** → **Crea app**.
