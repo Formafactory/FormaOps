@@ -47,6 +47,8 @@
     <label>Chiave dell'utente di sistema Meta
       <input name="token" type="password" autocomplete="off" placeholder="<%= metaHasToken ? 'lascia vuoto per provare quella salvata' : 'incolla qui la chiave' %>">
     </label>
+    <label>Al primo collegamento legge gli ultimi <input name="days" type="number" min="1" max="90" value="<%= metaDays %>" style="width:90px"> giorni
+      <span class="muted small" style="font-weight:normal">Dopo, ogni aggiornamento legge solo le novità.</span></label>
     <div class="actions"><button type="submit">Salva e prova</button></div>
   </form>
 </section>

@@ -178,6 +178,7 @@ app.get('/impostazioni', (req, res) => {
     hasKey: Boolean(cfg.key), keyTail: cfg.key ? cfg.key.slice(-4) : '',
     gmailUser: g.user, gmailHasPass: Boolean(g.pass), gmailDays: g.days, ignored,
     metaHasToken: Boolean(metaConfig(db).token),
+    metaDays: metaConfig(db).days,
     metaPages: JSON.parse(getSetting(db, 'meta_pages') || '[]'),
     metaWarnings: JSON.parse(getSetting(db, 'meta_warnings') || '[]'),
     msg: req.query.msg ?? null, ok: req.query.ok === '1',
@@ -214,6 +215,7 @@ app.post('/impostazioni/gmail', async (req, res) => {
 app.post('/impostazioni/meta', async (req, res) => {
   const token = String(req.body.token ?? '').replace(/\s+/g, '');
   if (token) setSetting(db, 'meta_token', token);
+  if (req.body.days) setSetting(db, 'meta_days', String(Math.min(Math.max(Number(req.body.days) || 7, 1), 90)));
   try {
     const pages = await testMeta(metaConfig(db));
     setSetting(db, 'meta_pages', JSON.stringify(pages));
