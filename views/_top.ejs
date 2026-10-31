@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><%= title %> · FormaOps</title>
   <link rel="stylesheet" href="/static/style.css">
+  <% if (typeof autoRefresh !== 'undefined' && autoRefresh) { %><meta http-equiv="refresh" content="<%= autoRefresh %>;url=<%= typeof autoRefreshUrl !== 'undefined' ? autoRefreshUrl : '' %>"><% } %>
 </head>
 <body>
 <header class="bar">

@@ -1,4 +1,4 @@
-<%- include('_top', { title: 'Arrivi' }) %>
+<%- include('_top', { title: 'Arrivi', autoRefresh: 180, autoRefreshUrl: '/?tab=' + tab + (source ? '&canale=' + source : '') }) %>
 <% if (flash) { %><p class="<%= flash.includes('Errore') ? 'error' : 'ok' %>"><%= flash %></p><% } %>
 
 <section class="syncbox">
@@ -18,6 +18,7 @@
       <% } else { %><span class="muted">aggiornati <%= when(sync.mstate.last_ok_at) %></span><% } %>
       <% if (sync.mstate.last_error) { %><span class="error-text"> · <%= sync.mstate.last_error %></span><% } %>
     </div>
+    <div class="muted"><% if (scheduler.minutes) { %>Aggiornamento automatico ogni <%= scheduler.minutes %> min<% if (scheduler.nextRunAt) { %> · prossimo alle <%= when(scheduler.nextRunAt).split(', ')[1] %><% } %><% } else { %>Aggiornamento automatico spento<% } %></div>
     <% if (!sync.configured || !sync.gmailConfigured || !sync.metaConfigured) { %><div><a href="/impostazioni">Collega i canali in Impostazioni</a></div><% } %>
   </div>
   <form method="post" action="/sync" class="inline-form"

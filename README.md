@@ -49,6 +49,12 @@ Guida passo passo: [docs/collegare-meta.md](docs/collegare-meta.md). La chiave d
 **Impostazioni** → Facebook e Instagram. FormaOps legge Messenger, DM Instagram e commenti a post e inserzioni,
 e non usa mai la chiave per rispondere o pubblicare.
 
+## Aggiornamento automatico, backup, avvio con Windows
+
+- Mentre FormaOps è acceso aggiorna da solo ordini, email e messaggi (di base ogni 15 minuti, modificabile in Impostazioni). La pagina Arrivi si ricarica da sola ogni 3 minuti.
+- Un backup al giorno del database nella cartella scelta in Impostazioni (consigliata una cartella di Google Drive); si tengono gli ultimi 30. Per ripristinare: chiudi FormaOps e copia il backup al posto di `formaops-data\formaops.sqlite`.
+- Doppio clic su `avvio-automatico-con-windows.bat` (una volta sola): FormaOps parte da solo, ridotto a icona, quando accendi il PC.
+
 ## Le schermate
 
 - **Arrivi**: conversazioni degli ultimi 30 giorni, con filtro "Da rispondere" (l'ultimo messaggio è del cliente), e ordini degli ultimi 7 giorni. Il pulsante **Aggiorna** legge ordini ed email.
@@ -73,4 +79,5 @@ npm test
 - Blocco 2 — ordini Vir3D in sola lettura: fatto.
 - Blocco 3 — Gmail in sola lettura e schermata Arrivi: fatto.
 - Blocco 4 — Facebook e Instagram (DM e commenti, anche inserzioni), filtri email: fatto.
-- Prossimo: sync automatica, backup, accesso dal telefono.
+- Blocco 5 — aggiornamento automatico, backup giornaliero, avvio con Windows: fatto.
+- Da fare: DM Instagram (via API con login Instagram), Pagina De Artis, accesso dal telefono.

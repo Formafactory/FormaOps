@@ -17,6 +17,8 @@ const { syncGmail, gmailConfig, testConnection } = require('./lib/sync-gmail');
 const { syncMeta, metaConfig, testConnection: testMeta } = require('./lib/sync-meta');
 const M = require('./lib/messages');
 const { normalizeEmail } = require('./lib/normalize');
+const { runBackup, listBackups } = require('./lib/backup');
+const { createScheduler } = require('./lib/scheduler');
 
 const PORT = Number(process.env.PORT) || 3210;
 const DATA_DIR = resolveDataDir(process.env.DATA_DIR);
@@ -113,9 +115,55 @@ async function syncAll() {
   if (!parts.length) parts.push('Errore: nessun canale collegato. Vai in Impostazioni.');
   return parts.join(' · ');
 }
-for (const route of ['/sync', '/sync/vir3d']) {
-  app.post(route, async (req, res) => res.redirect('/?sync=' + encodeURIComponent(await syncAll())));
+// Backup: cartella scelta in Impostazioni (es. Google Drive), altrimenti DATA_DIR/backup. Uno al giorno.
+function backupDir() { return getSetting(db, 'backup_dir') || path.join(DATA_DIR, 'backup'); }
+async function backupIfDue(force = false) {
+  const last = getSetting(db, 'backup_last_at');
+  if (!force && last && Date.now() - Date.parse(last) < 20 * 3600 * 1000) return null;
+  try {
+    const r = await runBackup(db, backupDir());
+    setSetting(db, 'backup_last_at', new Date().toISOString());
+    setSetting(db, 'backup_last_error', '');
+    console.log(`[backup] ${r.file}`);
+    return r;
+  } catch (err) {
+    setSetting(db, 'backup_last_error', err.message);
+    console.error(`[backup] errore: ${err.message}`);
+    return null;
+  }
 }
+
+// Aggiornamento automatico: ogni N minuti (Impostazioni), più il backup quotidiano.
+const scheduler = createScheduler({
+  minutes: Number(getSetting(db, 'auto_minutes') ?? 15),
+  firstDelayMs: 30000,
+  log: console.log,
+  run: async () => { const r = await syncAll(); await backupIfDue(); return r; },
+});
+app.locals.scheduler = scheduler.state;
+
+for (const route of ['/sync', '/sync/vir3d']) {
+  app.post(route, async (req, res) => {
+    if (scheduler.isRunning()) return res.redirect('/?sync=' + encodeURIComponent('Aggiornamento automatico già in corso: ricarica tra qualche minuto.'));
+    res.redirect('/?sync=' + encodeURIComponent(await scheduler.runNow()));
+  });
+}
+
+app.post('/impostazioni/automatico', (req, res) => {
+  const m = Math.min(Math.max(Number(req.body.minutes) || 0, 0), 240);
+  setSetting(db, 'auto_minutes', String(m));
+  scheduler.setMinutes(m);
+  const dir = String(req.body.backup_dir ?? '').trim();
+  setSetting(db, 'backup_dir', dir);
+  setSetting(db, 'meta_ig_dm', req.body.ig_dm ? '1' : '0');
+  res.redirect('/impostazioni?ok=1&msg=' + encodeURIComponent(m ? `Aggiornamento automatico ogni ${m} minuti.` : 'Aggiornamento automatico spento.'));
+});
+
+app.post('/impostazioni/backup', async (req, res) => {
+  const r = await backupIfDue(true);
+  res.redirect('/impostazioni?' + (r ? 'ok=1&msg=' + encodeURIComponent(`Backup salvato: ${r.file}`)
+    : 'msg=' + encodeURIComponent(`Backup non riuscito: ${getSetting(db, 'backup_last_error')}`)));
+});
 
 // DA COLLEGARE: mittenti email non ancora abbinati a un cliente.
 app.get('/da-collegare', (req, res) => {
@@ -179,6 +227,13 @@ app.get('/impostazioni', (req, res) => {
     gmailUser: g.user, gmailHasPass: Boolean(g.pass), gmailDays: g.days, ignored,
     metaHasToken: Boolean(metaConfig(db).token),
     metaDays: metaConfig(db).days,
+    igDm: metaConfig(db).igDm,
+    autoMinutes: scheduler.state.minutes,
+    backupDirSetting: getSetting(db, 'backup_dir') || '',
+    backupDirEffective: backupDir(),
+    backupLast: getSetting(db, 'backup_last_at'),
+    backupError: getSetting(db, 'backup_last_error'),
+    backupCount: listBackups(backupDir()).length,
     metaPages: JSON.parse(getSetting(db, 'meta_pages') || '[]'),
     metaWarnings: JSON.parse(getSetting(db, 'meta_warnings') || '[]'),
     msg: req.query.msg ?? null, ok: req.query.ok === '1',
@@ -323,9 +378,13 @@ app.use((err, req, res, _next) => {
 
 const server = app.listen(PORT, '127.0.0.1', () => {
   console.log(`[app] FormaOps pronto su http://localhost:${PORT}`);
+  const m = scheduler.state.minutes;
+  console.log(m ? `[auto] aggiornamento automatico ogni ${m} minuti (il primo tra 30 secondi)` : '[auto] aggiornamento automatico spento');
+  scheduler.start();
 });
 
 function shutdown() {
+  scheduler.stop();
   server.close(() => { db.close(); process.exit(0); });
 }
 process.on('SIGINT', shutdown);

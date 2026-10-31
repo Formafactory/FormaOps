@@ -54,6 +54,24 @@
 </section>
 
 <section class="card" style="margin-top:16px">
+  <h2>Aggiornamento automatico e backup</h2>
+  <form class="form" method="post" action="/impostazioni/automatico">
+    <label>Aggiorna ordini, email e messaggi ogni <input name="minutes" type="number" min="0" max="240" value="<%= autoMinutes %>" style="width:90px"> minuti
+      <span class="muted small" style="font-weight:normal">Mentre FormaOps è acceso. 0 = spento (resta il pulsante Aggiorna).</span></label>
+    <label>Cartella dei backup
+      <input name="backup_dir" value="<%= backupDirSetting %>" placeholder="<%= backupDirEffective %>">
+      <span class="muted small" style="font-weight:normal">Consigliata una cartella di Google Drive sul PC (es. <code>G:\Il mio Drive\FormaOps-backup</code>), così il backup esce dal PC.
+        Vuoto = <code><%= backupDirEffective %></code>. Un backup al giorno, si tengono gli ultimi 30.</span></label>
+    <label class="check"><input type="checkbox" name="ig_dm" value="1" <%= igDm ? 'checked' : '' %>>
+      Prova a leggere anche i DM di Instagram <span class="muted small">(oggi Meta non risponde: lascialo spento per non rallentare gli aggiornamenti)</span></label>
+    <div class="actions"><button type="submit">Salva</button></div>
+  </form>
+  <p class="small">Ultimo backup: <strong><%= backupLast ? when(backupLast) : 'mai' %></strong> · file presenti: <%= backupCount %>
+    <% if (backupError) { %><br><span class="error-text">Ultimo errore: <%= backupError %></span><% } %></p>
+  <form method="post" action="/impostazioni/backup" class="inline-form"><button type="submit" class="secondary">Fai un backup adesso</button></form>
+</section>
+
+<section class="card" style="margin-top:16px">
   <h2>Mittenti ignorati</h2>
   <p class="small muted">Newsletter, notifiche e fornitori che non vuoi vedere negli Arrivi. Si aggiungono da "Da collegare".
     Gli indirizzi automatici (noreply, notifiche…) sono già esclusi.</p>

@@ -95,3 +95,4 @@ button.secondary { background: #e9e6ef; color: var(--text) !important; }
 .list { table-layout: auto; max-width: 100%; }
 
 html, body { overflow-x: hidden; }
+.form label.check { display: flex; gap: 8px; align-items: baseline; font-weight: normal; }
