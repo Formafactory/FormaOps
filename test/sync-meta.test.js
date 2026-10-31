@@ -113,3 +113,11 @@ test('Meta chiede meno dati: la richiesta viene ripetuta con limiti ridotti', as
   const limits = fake.state.requests.filter((q) => q.url.includes('/conversations')).map((q) => new URL(q.url, 'http://x').searchParams.get('limit'));
   assert.ok(limits.includes('10') && limits.includes('2'), `limiti usati: ${limits}`);
 });
+
+test('Meta lenta a rispondere: si riprova con meno dati invece di fallire', async (t) => {
+  const { fake, db } = await setup(t);
+  fake.state.slowAbove = 3;
+  const r = await syncMeta(db, { cfg: { ...fake.cfg, timeoutMs: 400 } });
+  assert.equal(r.ok, true, r.error);
+  assert.equal(r.nuovi, 11);
+});

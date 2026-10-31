@@ -93,3 +93,5 @@ button.secondary { background: #e9e6ef; color: var(--text) !important; }
 .error ul { margin: 4px 0 0 16px; padding: 0; }
 .compact td strong { word-break: break-all; }
 .list { table-layout: auto; max-width: 100%; }
+
+html, body { overflow-x: hidden; }

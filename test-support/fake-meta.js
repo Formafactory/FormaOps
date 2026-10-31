@@ -67,10 +67,12 @@ function defaultData(now = Date.now()) {
 }
 
 function startFakeMeta(data = defaultData()) {
-  const state = { data, requests: [], pageSize: 2, maxLimit: null };
+  const state = { data, requests: [], pageSize: 2, maxLimit: null, slowAbove: null };
   let base;
-  const server = http.createServer((req, res) => {
+  const server = http.createServer(async (req, res) => {
     state.requests.push({ method: req.method, url: req.url });
+    const lim = Number(new URL(req.url, 'http://x').searchParams.get('limit'));
+    if (state.slowAbove && lim > state.slowAbove) await new Promise((r) => setTimeout(r, 1500));
     const send = (code, body) => { res.writeHead(code, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)); };
     if (req.method !== 'GET') return send(405, { error: { code: 1, message: 'only GET in tests' } });
     const url = new URL(req.url, 'http://x');
