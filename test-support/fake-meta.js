@@ -110,7 +110,7 @@ function startFakeMeta(data = defaultData()) {
     if (id && !edge) {
       const convs = Object.values(data.conversations).flat();
       const conv = convs.find((c) => c.id === id);
-      if (conv) return send(200, { id: conv.id, messages: conv.messages });
+      if (conv) return send(200, { id: conv.id, participants: conv.participants, messages: conv.messages });
       const posts = Object.values(data.posts).filter(Array.isArray).flat();
       const post = posts.find((x) => x.id === id);
       if (post) {
