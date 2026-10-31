@@ -121,3 +121,12 @@ test('Meta lenta a rispondere: si riprova con meno dati invece di fallire', asyn
   assert.equal(r.ok, true, r.error);
   assert.equal(r.nuovi, 11);
 });
+
+test('un errore temporaneo su una sezione non blocca le altre', async (t) => {
+  const { fake, db } = await setup(t);
+  fake.state.data.posts['P1:ads_posts'] = { error: { code: 2, message: 'Service temporarily unavailable' } };
+  const r = await syncMeta(db, { cfg: fake.cfg });
+  assert.equal(r.ok, true, r.error);
+  assert.equal(r.nuovi, 10, 'tutto tranne il commento all\'inserzione Facebook');
+  assert.ok(r.warnings.some((w) => /Vir3D: commenti alle inserzioni/.test(w)), r.warnings.join(' | '));
+});
