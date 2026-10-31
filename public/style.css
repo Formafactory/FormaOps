@@ -91,3 +91,5 @@ button.secondary { background: #e9e6ef; color: var(--text) !important; }
 .chan-facebook_comment { color: #1f4b7a; border-color: #c5d6ea; }
 .tabs .inline-form select { padding: 6px 8px; }
 .error ul { margin: 4px 0 0 16px; padding: 0; }
+.compact td strong { word-break: break-all; }
+.list { table-layout: auto; max-width: 100%; }

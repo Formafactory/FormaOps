@@ -67,7 +67,7 @@ function defaultData(now = Date.now()) {
 }
 
 function startFakeMeta(data = defaultData()) {
-  const state = { data, requests: [], pageSize: 2 };
+  const state = { data, requests: [], pageSize: 2, maxLimit: null };
   let base;
   const server = http.createServer((req, res) => {
     state.requests.push({ method: req.method, url: req.url });
@@ -104,6 +104,9 @@ function startFakeMeta(data = defaultData()) {
       return send(200, out);
     }
     const [id, edge] = parts;
+    if (state.maxLimit && Number(url.searchParams.get('limit')) > state.maxLimit) {
+      return send(500, { error: { code: 1, message: "Please reduce the amount of data you're asking for, then retry your request" } });
+    }
     if (edge === 'conversations') {
       if (pageTokens[token] !== id) return send(400, { error: { code: 190, message: 'Page token required' } });
       const convs = [...(data.conversations[`${id}:${url.searchParams.get('platform')}`] || [])]

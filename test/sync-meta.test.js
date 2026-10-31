@@ -103,3 +103,13 @@ test('collegare un profilo Facebook a un cliente; ignorare un profilo Instagram'
   await syncMeta(db, { cfg: fake.cfg });
   assert.equal(one(db, `SELECT COUNT(*) FROM messages WHERE counterpart_address = 'sara.m'`), 0, 'resta ignorata');
 });
+
+test('Meta chiede meno dati: la richiesta viene ripetuta con limiti ridotti', async (t) => {
+  const { fake, db } = await setup(t);
+  fake.state.maxLimit = 3;
+  const r = await syncMeta(db, { cfg: fake.cfg });
+  assert.equal(r.ok, true, r.error);
+  assert.equal(r.nuovi, 11);
+  const limits = fake.state.requests.filter((q) => q.url.includes('/conversations')).map((q) => new URL(q.url, 'http://x').searchParams.get('limit'));
+  assert.ok(limits.includes('10') && limits.includes('2'), `limiti usati: ${limits}`);
+});
