@@ -62,8 +62,14 @@ Si leggono con una chiave dell'account Instagram (API con login Instagram): guid
 
 ## Le schermate
 
-- **Arrivi**: conversazioni degli ultimi 30 giorni, con filtro "Da rispondere" (l'ultimo messaggio è del cliente), e ordini degli ultimi 7 giorni. Il pulsante **Aggiorna** legge ordini ed email.
-- **Clienti**: anagrafica con ordini ed email di ciascuno.
+- **Arrivi**: l'inbox di tutti i canali. Schede Da rispondere, In attesa, Rimandate, Chiuse, Tutte, Personale.
+  In "Da rispondere" in cima chi ha un ordine in corso, poi gli urgenti (DM e commenti dopo 4 ore, email dopo 24,
+  modificabili in Impostazioni), poi chi aspetta da più tempo. Per ogni conversazione: Chiudi, Rimanda (domani, 3 giorni,
+  una settimana) o Risposto altrove. Se il cliente riscrive, la conversazione torna da sola tra le da rispondere.
+- **Conversazione**: i messaggi in ordine, lo stato, la scheda del cliente in breve e il link per rispondere nel canale.
+- **Clienti**: anagrafica con relazione (Cliente, Lead, B2B, Fornitore, Personale), ordini, messaggi, totale speso, ordini in corso.
+  La relazione è automatica (De Artis = B2B, con ordini = Cliente, altrimenti Lead) e si corregge a mano dalla scheda.
+  I contatti Personale stanno fuori dalla lista di lavoro, nella loro scheda.
 - **Da collegare**: chi ti ha scritto ma non è ancora associato a un cliente. Lo colleghi una volta, poi viene riconosciuto da solo. Newsletter e fornitori si ignorano da qui.
 - **Da verificare**: casi ambigui degli ordini (es. email di un cliente e telefono di un altro).
 
@@ -86,4 +92,5 @@ npm test
 - Blocco 4 — Facebook e Instagram (DM e commenti, anche inserzioni), filtri email: fatto.
 - Blocco 5 — aggiornamento automatico, backup giornaliero, avvio con Windows: fatto.
 - DM Instagram via API con login Instagram: fatto.
-- Da fare: Pagina De Artis, accesso dal telefono.
+- Blocco 6 — Relationship Intelligence e Inbox con stati e urgenza: fatto.
+- Da fare: DM Instagram (chiave), Pagina De Artis, accesso dal telefono.

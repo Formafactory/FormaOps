@@ -1,4 +1,4 @@
-<%- include('_top', { title: 'Clienti' }) %>
+<%- include('_top', { title: 'Clienti', section: 'clienti' }) %>
 
 
 
@@ -12,20 +12,25 @@
       <option value="<%= b %>" <%= brand === b ? 'selected' : '' %>><%= BRAND_LABEL[b] %></option>
     <% }) %>
   </select>
+  <select name="relazione">
+    <option value="">Tutte le relazioni</option>
+    <% RELATIONSHIPS.forEach(function (r) { %><option value="<%= r %>" <%= rel === r ? 'selected' : '' %>><%= RELATIONSHIP_LABEL[r] %></option><% }) %>
+  </select>
   <button type="submit">Cerca</button>
-  <% if (q || brand) { %><a href="/clienti">Azzera</a><% } %>
+  <% if (q || brand || rel) { %><a href="/clienti">Azzera</a><% } %>
 </form>
 
 <% if (customers.length === 0) { %>
-  <p class="empty"><%= q || brand ? 'Nessun cliente trovato.' : 'Ancora nessun cliente.' %>
+  <p class="empty"><%= q || brand || rel ? 'Nessun cliente trovato.' : 'Ancora nessun cliente.' %>
     <a href="/customers/new">Crea un cliente</a></p>
 <% } else { %>
 <table class="list">
-  <thead><tr><th>Nome</th><th>Brand</th><th>Contatti</th><th>Ordini</th><th>Aggiornato</th></tr></thead>
+  <thead><tr><th>Nome</th><th>Relazione</th><th>Brand</th><th>Contatti</th><th>Ordini</th><th>Aggiornato</th></tr></thead>
   <tbody>
   <% customers.forEach(function (c) { %>
     <tr>
       <td><a href="/customers/<%= c.id %>"><strong><%= c.name %></strong></a></td>
+      <td><span class="tag rel rel-<%= c.relationship %>"><%= RELATIONSHIP_LABEL[c.relationship] %></span></td>
       <td><span class="tag tag-<%= c.brand %>"><%= BRAND_LABEL[c.brand] %></span></td>
       <td class="contacts"><% c.contacts.forEach(function (k) { %><span title="<%= TYPE_LABEL[k.type] %>"><%= k.type === 'facebook' ? 'Facebook' : k.type === 'instagram' ? '@' + k.value_normalized : k.value_normalized %></span><% }) %></td>
       <td><%= c.order_count || '' %><% if (c.last_order_at) { %> <span class="muted small">ultimo <%= when(c.last_order_at).split(',')[0] %></span><% } %></td>

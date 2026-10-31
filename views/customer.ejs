@@ -1,7 +1,29 @@
-<%- include('_top', { title: customer.name }) %>
-<p><a href="/clienti">&larr; Clienti</a></p>
-<h1><%= customer.name %> <span class="tag tag-<%= customer.brand %>"><%= BRAND_LABEL[customer.brand] %></span></h1>
-<p class="muted">Cliente #<%= customer.id %> · creato <%= when(customer.created_at).split(',')[0] %> · aggiornato <%= when(customer.updated_at) %></p>
+<%- include('_top', { title: customer.name, section: 'clienti' }) %>
+<p><a href="/clienti">Tutti i clienti</a></p>
+<div class="thread-head">
+  <div>
+    <h1><%= customer.name %></h1>
+    <div class="thread-meta">
+      <span class="tag tag-<%= customer.brand %>"><%= BRAND_LABEL[customer.brand] %></span>
+      <span>Cliente #<%= customer.id %>, nell'anagrafica dal <%= day(customer.created_at) %></span>
+    </div>
+  </div>
+  <form method="post" action="/customers/<%= customer.id %>/relazione" class="relform">
+    <label for="rel" class="small muted">Relazione</label>
+    <select id="rel" name="relazione" onchange="this.form.submit()">
+      <option value="">Automatica: <%= RELATIONSHIP_LABEL[summary.relationship.auto] %></option>
+      <% RELATIONSHIPS.forEach(function (r) { %><option value="<%= r %>" <%= summary.relationship.manual === r ? 'selected' : '' %>><%= RELATIONSHIP_LABEL[r] %></option><% }) %>
+    </select>
+    <noscript><button class="secondary">Salva</button></noscript>
+  </form>
+</div>
+
+<div class="summary">
+  <div><div class="k">Ordini</div><div class="v"><%= summary.orders %></div></div>
+  <div><div class="k">Speso in totale</div><div class="v"><%= money(summary.spent_minor, summary.currency || 'EUR') %></div></div>
+  <div><div class="k">Ordini in corso</div><div class="v <%= summary.open_orders.length ? 'bronze' : '' %>"><%= summary.open_orders.length ? summary.open_orders.map(function (o) { return o.order_number; }).join(', ') : 'nessuno' %></div></div>
+  <div><div class="k">Ultimo contatto</div><div class="v"><%= day(summary.last_contact) %></div></div>
+</div>
 
 <% if (error) { %><p class="error"><%= error %></p><% } %>
 <% if (saved) { %><p class="ok">Salvato.</p><% } %>
@@ -54,14 +76,13 @@
 <section class="card orders">
   <h2>Messaggi e commenti <span class="muted">(<%= threads.length %> conversazioni)</span></h2>
   <% if (threads.length === 0) { %><p class="muted">Nessun messaggio.</p><% } %>
-  <% threads.forEach(function (t) { %>
+  <% threads.forEach(function (t) { var link = '/conversazione?k=' + encodeURIComponent(t.thread_key) + '&da=' + encodeURIComponent('/customers/' + customer.id); %>
     <div class="order">
       <div class="thread-line">
-        <span class="muted small nowrap"><%= when(t.sent_at) %></span>
+        <span class="st st-<%= t.status %>"><%= THREAD_STATUS_LABEL[t.status] %></span>
         <span class="chan chan-<%= t.source %>"><%= SOURCE_LABEL[t.source] || t.source %></span>
-        <strong><%= t.subject || '(senza oggetto)' %></strong><% if (t.n > 1) { %> <span class="muted small">(<%= t.n %>)</span><% } %>
-        <% if (t.direction === 'in') { %><span class="tag status-ready_to_ship">Da rispondere</span><% } else { %><span class="tag status-delivered">Risposto</span><% } %>
-        <% if (t.link) { %><a class="small" href="<%= t.link %>" target="_blank" rel="noopener"><%= OPEN_LABEL[t.source] || 'Apri' %> ↗</a><% } %>
+        <a class="subj" href="<%= link %>"><%= t.subject || '(senza oggetto)' %></a><% if (t.n > 1) { %> <span class="muted small">(<%= t.n %>)</span><% } %>
+        <span class="muted small nowrap" style="margin-left:auto"><%= when(t.last_at) %></span>
       </div>
       <div class="muted small"><%= t.direction === 'out' ? 'Tu: ' : '' %><%= t.snippet %></div>
     </div>

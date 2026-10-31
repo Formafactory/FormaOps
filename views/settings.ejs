@@ -1,4 +1,4 @@
-<%- include('_top', { title: 'Impostazioni' }) %>
+<%- include('_top', { title: 'Impostazioni', section: 'impostazioni' }) %>
 <h1>Impostazioni</h1>
 <% if (msg) { %><p class="<%= ok ? 'ok' : 'error' %>"><%= msg %></p><% } %>
 
@@ -64,6 +64,16 @@
     </label>
     <div class="actions"><button type="submit">Salva e prova</button>
       <% if (igHasToken) { %><button type="submit" name="remove" value="1" class="secondary">Rimuovi</button><% } %></div>
+  </form>
+</section>
+
+<section class="card" style="margin-top:16px">
+  <h2>Urgenza</h2>
+  <p class="small">Dopo quante ore senza risposta una conversazione diventa urgente e sale in cima agli Arrivi. Chi ha un ordine in corso sta comunque sempre in alto.</p>
+  <form class="form" method="post" action="/impostazioni/urgenza">
+    <label>Messaggi e commenti di Facebook e Instagram <span><input name="chat" type="number" min="1" max="720" value="<%= urgency.chat %>" style="width:90px"> ore</span></label>
+    <label>Email <span><input name="email" type="number" min="1" max="720" value="<%= urgency.email %>" style="width:90px"> ore</span></label>
+    <div class="actions"><button type="submit">Salva</button></div>
   </form>
 </section>
 

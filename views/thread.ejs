@@ -1,0 +1,85 @@
+<% var name = t.customer_id ? t.customer_name : (t.counterpart_name || displayAddress(t.contact_type, t.counterpart_address)); %>
+<%- include('_top', { title: name, section: 'arrivi' }) %>
+<p><a href="<%= back %>">Torna agli Arrivi</a></p>
+<% if (flash) { %><p class="ok"><%= flash %></p><% } %>
+
+<div class="thread-head">
+  <div>
+    <h1><%= name %></h1>
+    <div class="thread-meta">
+      <span class="st st-<%= t.status %>"><%= THREAD_STATUS_LABEL[t.status] %><% if (t.status === 'rimandata') { %> fino al <%= day(t.snooze_until) %><% } %></span>
+      <% if (t.status === 'da_rispondere') { %><span class="<%= t.urgent ? 'error-text' : '' %>">aspetta da <%= waited(t.waited_hours) %><%= t.urgent ? ', urgente' : '' %></span><% } %>
+      <span class="chan chan-<%= t.source %>"><%= SOURCE_LABEL[t.source] %></span>
+      <span><%= displayAddress(t.contact_type, t.counterpart_address) %><% if (t.account && t.source !== 'gmail') { %>, su <%= t.account %><% } %></span>
+    </div>
+  </div>
+  <% if (t.link) { %><a class="btn" href="<%= t.link %>" target="_blank" rel="noopener"><%= OPEN_LABEL[t.source] || 'Apri nel canale' %></a><% } %>
+</div>
+
+<div class="thread-layout">
+  <div>
+    <div class="actionbar">
+      <% if (t.status === 'da_rispondere') { %>
+        <form method="post" action="/conversazioni/stato" class="inline-form"><input type="hidden" name="k" value="<%= t.thread_key %>"><input type="hidden" name="da" value="<%= back %>">
+          <button name="azione" value="attesa" class="secondary" title="Hai già risposto per telefono, WhatsApp o di persona">Risposto altrove</button>
+          <button name="azione" value="chiudi" class="secondary" title="Non serve rispondere">Chiudi</button></form>
+        <span class="sep"></span>
+        <form method="post" action="/conversazioni/stato" class="inline-form"><input type="hidden" name="k" value="<%= t.thread_key %>"><input type="hidden" name="da" value="<%= back %>"><input type="hidden" name="azione" value="rimanda">
+          <span class="muted small">Rimanda</span>
+          <button name="giorni" value="1" class="quiet">a domani</button>
+          <button name="giorni" value="3" class="quiet">tra 3 giorni</button>
+          <button name="giorni" value="7" class="quiet">tra una settimana</button></form>
+      <% } else { %>
+        <form method="post" action="/conversazioni/stato" class="inline-form"><input type="hidden" name="k" value="<%= t.thread_key %>"><input type="hidden" name="da" value="<%= here %>">
+          <% if (t.status !== 'chiusa') { %><button name="azione" value="chiudi" class="secondary">Chiudi</button><% } %>
+          <% if (t.manual_status && t.manual_status === t.status) { %><button name="azione" value="riapri" class="secondary">Riapri</button><% } %>
+        </form>
+        <span class="muted small">Se il cliente riscrive, torna da sola tra le da rispondere.</span>
+      <% } %>
+    </div>
+
+    <div class="timeline">
+      <% t.messages.forEach(function (m) { %>
+        <div class="bubble <%= m.direction %>">
+          <div class="meta"><%= m.direction === 'out' ? 'Tu' : (m.counterpart_name || displayAddress(m.contact_type, m.counterpart_address)) %>, <%= when(m.sent_at) %></div>
+          <% if (m.source === 'gmail' && m.subject) { %><div class="subj"><%= m.subject %></div><% } %>
+          <div class="body"><%= m.snippet || '(senza testo)' %></div>
+        </div>
+      <% }) %>
+    </div>
+    <p class="note">Qui vedi l'anteprima dei messaggi. Per leggerli per intero e rispondere usa "<%= OPEN_LABEL[t.source] || 'Apri nel canale' %>".</p>
+  </div>
+
+  <aside class="side">
+    <% if (summary) { %>
+      <section class="card">
+        <h2><a href="/customers/<%= t.customer_id %>"><%= t.customer_name %></a></h2>
+        <form method="post" action="/customers/<%= t.customer_id %>/relazione" class="relform" style="margin-bottom:14px">
+          <input type="hidden" name="da" value="<%= here %>">
+          <select name="relazione" onchange="this.form.submit()" aria-label="Relazione">
+            <option value="">Automatica: <%= RELATIONSHIP_LABEL[summary.relationship.auto] %></option>
+            <% RELATIONSHIPS.forEach(function (r) { %><option value="<%= r %>" <%= summary.relationship.manual === r ? 'selected' : '' %>><%= RELATIONSHIP_LABEL[r] %></option><% }) %>
+          </select>
+          <span class="tag tag-<%= t.customer_brand %>"><%= BRAND_LABEL[t.customer_brand] %></span>
+          <noscript><button class="secondary">Salva</button></noscript>
+        </form>
+        <dl class="facts">
+          <dt>Ordini</dt><dd><%= summary.orders %><% if (summary.orders) { %> (<%= money(summary.spent_minor, summary.currency || 'EUR') %> in totale)<% } %></dd>
+          <% summary.open_orders.forEach(function (o) { %>
+            <dt>In corso</dt><dd><span class="order-flag" style="margin:0"><%= o.order_number %>: <%= (STATUS_LABEL[o.status] || o.status).toLowerCase() %></span></dd>
+          <% }) %>
+          <dt>Ultimo ordine</dt><dd><%= day(summary.last_order) %></dd>
+          <dt>Primo contatto</dt><dd><%= day(summary.first_contact) %></dd>
+          <dt>Canali</dt><dd><%= summary.sources.map(function (s) { return SOURCE_LABEL[s] || s; }).join(', ') || '—' %></dd>
+        </dl>
+      </section>
+    <% } else { %>
+      <section class="card">
+        <h2>Non ancora collegato</h2>
+        <p class="small">FormaOps non sa a quale cliente appartiene questo contatto. Collegalo una volta e dal messaggio successivo verrà riconosciuto da solo.</p>
+        <a class="btn" href="/da-collegare#<%= encodeURIComponent(t.contact_type + ':' + t.counterpart_address) %>">Collega a un cliente</a>
+      </section>
+    <% } %>
+  </aside>
+</div>
+<%- include('_bottom') %>

@@ -1,35 +1,122 @@
-<%- include('_top', { title: 'Arrivi', autoRefresh: 180, autoRefreshUrl: '/?tab=' + tab + (source ? '&canale=' + source : '') }) %>
+<%- include('_top', { title: 'Arrivi', section: 'arrivi', autoRefresh: 180, autoRefreshUrl: '/?' + qs }) %>
+<%
+  var here = '/?' + qs;
+  var TABS = [
+    ['rispondere', 'Da rispondere', counts.rispondere],
+    ['attesa', 'In attesa', counts.attesa],
+    ['rimandate', 'Rimandate', counts.rimandate],
+    ['chiuse', 'Chiuse', counts.chiuse],
+    ['tutte', 'Tutte', counts.tutte],
+    ['personale', 'Personale', counts.personale],
+  ];
+  function tabUrl(v) { return '/?vista=' + v + (source ? '&canale=' + source : '') + (rel ? '&relazione=' + rel : ''); }
+  function chState(configured, st) { return !configured ? 'off' : (st && st.last_error ? 'bad' : ''); }
+%>
 <% if (flash) { %><p class="<%= flash.includes('Errore') ? 'error' : 'ok' %>"><%= flash %></p><% } %>
+<% if (typeof ok !== 'undefined' && ok) { %><p class="ok"><%= ok %></p><% } %>
 
 <section class="syncbox">
-  <div class="small">
-    <div><strong>Ordini Vir3D</strong>
-      <% if (!sync.configured) { %><span class="muted">non collegato</span>
-      <% } else { %><span class="muted">aggiornati <%= when(sync.state.last_ok_at) %></span><% } %>
-      <% if (sync.state.last_error) { %><span class="error-text"> · <%= sync.state.last_error %></span><% } %>
-    </div>
-    <div><strong>Email</strong>
-      <% if (!sync.gmailConfigured) { %><span class="muted">non collegata</span>
-      <% } else { %><span class="muted">aggiornata <%= when(sync.gstate.last_ok_at) %></span><% } %>
-      <% if (sync.gstate.last_error) { %><span class="error-text"> · <%= sync.gstate.last_error %></span><% } %>
-    </div>
-    <div><strong>Facebook e Instagram</strong>
-      <% if (!sync.metaConfigured) { %><span class="muted">non collegati</span>
-      <% } else { %><span class="muted">aggiornati <%= when(sync.mstate.last_ok_at) %></span><% } %>
-      <% if (sync.mstate.last_error) { %><span class="error-text"> · <%= sync.mstate.last_error %></span><% } %>
-    </div>
-    <div class="muted"><% if (scheduler.minutes) { %>Aggiornamento automatico ogni <%= scheduler.minutes %> min<% if (scheduler.nextRunAt) { %> · prossimo alle <%= when(scheduler.nextRunAt).split(', ')[1] %><% } %><% } else { %>Aggiornamento automatico spento<% } %></div>
-    <% if (!sync.configured || !sync.gmailConfigured || !sync.metaConfigured) { %><div><a href="/impostazioni">Collega i canali in Impostazioni</a></div><% } %>
+  <div class="channels">
+    <span title="<%= sync.state.last_error || '' %>"><i class="dot <%= chState(sync.configured, sync.state) %>"></i><strong>Ordini</strong> <%= sync.configured ? when(sync.state.last_ok_at) : 'non collegati' %></span>
+    <span title="<%= sync.gstate.last_error || '' %>"><i class="dot <%= chState(sync.gmailConfigured, sync.gstate) %>"></i><strong>Email</strong> <%= sync.gmailConfigured ? when(sync.gstate.last_ok_at) : 'non collegata' %></span>
+    <span title="<%= sync.mstate.last_error || '' %>"><i class="dot <%= chState(sync.metaConfigured, sync.mstate) %>"></i><strong>Facebook e Instagram</strong> <%= sync.metaConfigured ? when(sync.mstate.last_ok_at) : 'non collegati' %></span>
+    <span><% if (scheduler.minutes) { %>Aggiornamento automatico ogni <%= scheduler.minutes %> min<% if (scheduler.nextRunAt) { %>, il prossimo alle <%= when(scheduler.nextRunAt).split(', ')[1] %><% } %><% } else { %>Aggiornamento automatico spento<% } %></span>
   </div>
   <form method="post" action="/sync" class="inline-form"
-        onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Aggiorno… (può volerci un po\')'">
+        onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Aggiorno…'">
     <button type="submit">Aggiorna</button>
   </form>
 </section>
+<% [['Ordini', sync.state], ['Email', sync.gstate], ['Facebook e Instagram', sync.mstate]].forEach(function (c) { if (c[1] && c[1].last_error) { %>
+  <p class="error small"><%= c[0] %>: <%= c[1].last_error %></p>
+<% } }) %>
+
+<div class="inbox-head">
+  <nav class="tabs" aria-label="Stato delle conversazioni">
+    <% TABS.forEach(function (tb) { %>
+      <a href="<%= tabUrl(tb[0]) %>" class="<%= view === tb[0] ? 'active' : '' %>"><%= tb[1] %><span class="n"><%= tb[2] %></span><% if (tb[0] === 'rispondere' && counts.urgenti) { %> <span class="hot" title="urgenti"><%= counts.urgenti %> urgenti</span><% } %></a>
+    <% }) %>
+  </nav>
+  <form method="get" action="/" class="filters">
+    <input type="hidden" name="vista" value="<%= view %>">
+    <select name="canale" onchange="this.form.submit()" aria-label="Canale">
+      <option value="">Tutti i canali</option>
+      <% Object.keys(SOURCE_LABEL).forEach(function (k) { %><option value="<%= k %>" <%= source === k ? 'selected' : '' %>><%= SOURCE_LABEL[k] %></option><% }) %>
+    </select>
+    <% if (view !== 'personale') { %>
+    <select name="relazione" onchange="this.form.submit()" aria-label="Relazione">
+      <option value="">Tutte le relazioni</option>
+      <% RELATIONSHIPS.filter(function (r) { return r !== 'personale'; }).concat(['sconosciuto']).forEach(function (r) { %><option value="<%= r %>" <%= rel === r ? 'selected' : '' %>><%= RELATIONSHIP_LABEL[r] %></option><% }) %>
+    </select>
+    <% } %>
+    <noscript><button type="submit" class="secondary">Filtra</button></noscript>
+  </form>
+</div>
+
+<% if (threads.length === 0) { %>
+  <p class="empty">
+    <% if (view === 'rispondere') { %>Nessuno aspetta una tua risposta.<% } else if (view === 'personale') { %>Nessuna conversazione con contatti personali. Per spostarne uno qui, apri la sua scheda e scegli la relazione Personale.<% } else { %>Nessuna conversazione in questa scheda.<% } %>
+    <% if (!sync.gmailConfigured || !sync.metaConfigured) { %><a href="/impostazioni">Collega i canali</a><% } %>
+  </p>
+<% } else { %>
+<div class="inbox">
+  <% threads.forEach(function (t) {
+       var link = '/conversazione?k=' + encodeURIComponent(t.thread_key) + '&da=' + encodeURIComponent(here);
+       var name = t.customer_id ? t.customer_name : (t.counterpart_name || displayAddress(t.contact_type, t.counterpart_address));
+       var pct = t.status === 'da_rispondere' ? Math.min(100, Math.round(t.waited_hours / t.limit * 100)) : 0; %>
+    <article class="row <%= t.has_open_order && t.status === 'da_rispondere' ? 'is-order' : '' %> <%= t.urgent ? 'is-urgent' : '' %>">
+      <div class="wait">
+        <% if (t.status === 'da_rispondere') { %>
+          <span class="t" title="Aspetta dal <%= when(t.waiting_since) %>"><%= waited(t.waited_hours) %></span>
+          <span class="meter" aria-hidden="true"><i style="width:<%= pct %>%"></i></span>
+          <span class="lim"><%= t.urgent ? 'urgente' : 'limite ' + t.limit + ' h' %></span>
+        <% } else { %>
+          <span class="st st-<%= t.status %>"><%= THREAD_STATUS_LABEL[t.status] %></span>
+          <span class="when"><%= t.status === 'rimandata' ? 'torna il ' + day(t.snooze_until) : day(t.last_at) %></span>
+        <% } %>
+      </div>
+      <div class="who">
+        <a class="name" href="<%= link %>"><%= name %></a>
+        <div class="addr"><%= displayAddress(t.contact_type, t.counterpart_address) %><% if (t.account && t.source !== 'gmail') { %>, su <%= t.account %><% } %></div>
+        <div class="tags">
+          <span class="tag rel rel-<%= t.relationship %>"><%= RELATIONSHIP_LABEL[t.relationship] %></span>
+          <% if (t.customer_brand) { %><span class="tag tag-<%= t.customer_brand %>"><%= BRAND_LABEL[t.customer_brand] %></span><% } %>
+        </div>
+        <% if (t.open_order) { %><span class="order-flag">Ordine <%= t.open_order %>: <%= (STATUS_LABEL[t.open_order_status] || t.open_order_status).toLowerCase() %></span><% } %>
+      </div>
+      <a class="msg" href="<%= link %>">
+        <div class="subj"><span class="chan chan-<%= t.source %>"><%= SOURCE_LABEL[t.source] || t.source %></span>&ensp;<%= t.subject || '(senza oggetto)' %><% if (t.n > 1) { %> <span class="muted small">(<%= t.n %>)</span><% } %></div>
+        <div class="snip"><%= t.direction === 'out' ? 'Tu: ' : '' %><%= t.snippet %></div>
+      </a>
+      <div class="ops">
+        <% if (t.status === 'da_rispondere') { %>
+          <form method="post" action="/conversazioni/stato"><input type="hidden" name="k" value="<%= t.thread_key %>"><input type="hidden" name="da" value="<%= here %>">
+            <button class="quiet" name="azione" value="chiudi" title="Non serve rispondere">Chiudi</button></form>
+          <details class="snooze"><summary>Rimanda</summary>
+            <form method="post" action="/conversazioni/stato" class="menu"><input type="hidden" name="k" value="<%= t.thread_key %>"><input type="hidden" name="da" value="<%= here %>"><input type="hidden" name="azione" value="rimanda">
+              <button class="quiet" name="giorni" value="1">A domani</button>
+              <button class="quiet" name="giorni" value="3">Tra 3 giorni</button>
+              <button class="quiet" name="giorni" value="7">Tra una settimana</button>
+            </form>
+          </details>
+          <form method="post" action="/conversazioni/stato"><input type="hidden" name="k" value="<%= t.thread_key %>"><input type="hidden" name="da" value="<%= here %>">
+            <button class="quiet" name="azione" value="attesa" title="Hai già risposto per telefono, WhatsApp o di persona">Risposto altrove</button></form>
+        <% } else if (t.status !== 'in_attesa' || t.manual_status === 'in_attesa') { %>
+          <form method="post" action="/conversazioni/stato"><input type="hidden" name="k" value="<%= t.thread_key %>"><input type="hidden" name="da" value="<%= here %>">
+            <button class="quiet" name="azione" value="riapri">Riapri</button></form>
+        <% } else { %>
+          <form method="post" action="/conversazioni/stato"><input type="hidden" name="k" value="<%= t.thread_key %>"><input type="hidden" name="da" value="<%= here %>">
+            <button class="quiet" name="azione" value="chiudi">Chiudi</button></form>
+        <% } %>
+      </div>
+    </article>
+  <% }) %>
+</div>
+<% } %>
 
 <% if (recentOrders.length) { %>
-<section class="card">
-  <h2>Ordini degli ultimi 7 giorni <span class="muted">(<%= recentOrders.length %>)</span></h2>
+<details class="recent">
+  <summary>Ordini degli ultimi 7 giorni (<%= recentOrders.length %>)</summary>
   <table class="list compact">
     <% recentOrders.forEach(function (o) { %>
       <tr>
@@ -41,52 +128,6 @@
       </tr>
     <% }) %>
   </table>
-</section>
-<% } %>
-
-<h1>Messaggi</h1>
-<div class="tabs">
-  <a class="<%= tab === 'rispondere' ? 'active' : '' %>" href="/?tab=rispondere<%= source ? '&canale=' + source : '' %>">Da rispondere <span class="badge"><%= toAnswer %></span></a>
-  <a class="<%= tab === 'tutti' ? 'active' : '' %>" href="/?tab=tutti<%= source ? '&canale=' + source : '' %>">Tutti (30 giorni)</a>
-  <form method="get" action="/" class="inline-form">
-    <input type="hidden" name="tab" value="<%= tab %>">
-    <select name="canale" onchange="this.form.submit()">
-      <option value="">Tutti i canali</option>
-      <% Object.keys(SOURCE_LABEL).forEach(function (k) { %><option value="<%= k %>" <%= source === k ? 'selected' : '' %>><%= SOURCE_LABEL[k] %></option><% }) %>
-    </select>
-  </form>
-</div>
-
-<% if (threads.length === 0) { %>
-  <p class="empty"><%= tab === 'rispondere' ? 'Nessuna conversazione in attesa di risposta.' : 'Nessun messaggio negli ultimi 30 giorni.' %>
-    <% if (!sync.gmailConfigured || !sync.metaConfigured) { %><a href="/impostazioni">Collega i canali</a><% } %></p>
-<% } else { %>
-<table class="list threads">
-  <tbody>
-  <% threads.forEach(function (t) { %>
-    <tr class="<%= t.direction === 'in' ? 'waiting' : '' %>">
-      <td class="nowrap muted small"><%= when(t.sent_at) %></td>
-      <td class="who">
-        <% if (t.customer_id) { %>
-          <a href="/customers/<%= t.customer_id %>"><strong><%= t.customer_name %></strong></a>
-          <span class="tag tag-<%= t.customer_brand %>"><%= BRAND_LABEL[t.customer_brand] %></span>
-        <% } else { %>
-          <strong><%= t.counterpart_name || displayAddress(t.contact_type, t.counterpart_address) %></strong>
-          <a class="small" href="/da-collegare#<%= encodeURIComponent(t.contact_type + ':' + t.counterpart_address) %>">collega</a>
-        <% } %>
-        <div class="muted small"><%= displayAddress(t.contact_type, t.counterpart_address) %><% if (t.account && t.source !== 'gmail') { %> → <%= t.account %><% } %></div>
-      </td>
-      <td class="msg">
-        <span class="chan chan-<%= t.source %>"><%= SOURCE_LABEL[t.source] || t.source %></span> <strong><%= t.subject || '(senza oggetto)' %></strong><% if (t.n > 1) { %> <span class="muted small">(<%= t.n %>)</span><% } %>
-        <div class="muted small"><%= t.direction === 'out' ? 'Tu: ' : '' %><%= t.snippet %></div>
-      </td>
-      <td class="nowrap">
-        <% if (t.direction === 'in') { %><span class="tag status-ready_to_ship">Da rispondere</span><% } else { %><span class="tag status-delivered">Risposto</span><% } %>
-        <% if (t.link) { %><div><a class="small" href="<%= t.link %>" target="_blank" rel="noopener"><%= OPEN_LABEL[t.source] || 'Apri' %> ↗</a></div><% } %>
-      </td>
-    </tr>
-  <% }) %>
-  </tbody>
-</table>
+</details>
 <% } %>
 <%- include('_bottom') %>

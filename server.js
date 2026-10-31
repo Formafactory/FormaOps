@@ -16,6 +16,7 @@ const { getSetting, setSetting, vir3dConfig } = require('./lib/settings');
 const { syncGmail, gmailConfig, testConnection } = require('./lib/sync-gmail');
 const { syncMeta, metaConfig, testConnection: testMeta, testInstagramToken } = require('./lib/sync-meta');
 const M = require('./lib/messages');
+const I = require('./lib/inbox');
 const { normalizeEmail } = require('./lib/normalize');
 const { runBackup, listBackups } = require('./lib/backup');
 const { createScheduler } = require('./lib/scheduler');
@@ -53,6 +54,16 @@ app.locals.SOURCE_LABEL = M.SOURCE_LABEL;
 app.locals.displayAddress = M.displayAddress;
 app.locals.OPEN_LABEL = { gmail: 'Apri in Gmail', messenger: 'Apri in Meta', instagram: 'Apri in Meta',
   facebook_comment: 'Apri il commento', instagram_comment: 'Apri il post' };
+app.locals.RELATIONSHIPS = I.RELATIONSHIPS;
+app.locals.RELATIONSHIP_LABEL = I.RELATIONSHIP_LABEL;
+app.locals.THREAD_STATUS_LABEL = I.STATUS_LABEL;
+// Tempo di attesa leggibile: 35 min, 5 h, 3 g.
+app.locals.waited = (hours) => {
+  if (hours < 1) return `${Math.max(1, Math.round(hours * 60))} min`;
+  if (hours < 48) return `${Math.floor(hours)} h`;
+  return `${Math.floor(hours / 24)} g`;
+};
+app.locals.day = (iso) => (iso ? app.locals.when(iso).split(',')[0] : '—');
 
 function syncInfo() {
   const gstate = db.prepare(`SELECT * FROM sync_state WHERE source = 'gmail'`).get() || {};
@@ -65,31 +76,66 @@ function syncInfo() {
     mstate,
     metaConfigured: Boolean(metaConfig(db).token),
     reviewOpen: db.prepare('SELECT COUNT(*) FROM review_items WHERE resolved_at IS NULL').pluck().get(),
+    inbox: I.inbox(db).counts,
     unlinked: db.prepare(`SELECT COUNT(*) FROM (SELECT 1 FROM messages WHERE customer_id IS NULL AND direction = 'in'
                           GROUP BY contact_type, counterpart_address)`).pluck().get(),
   };
 }
 app.use((req, res, next) => { res.locals.nav = syncInfo(); next(); });
 
-// ARRIVI: conversazioni recenti di tutti i canali + ordini recenti.
+// ARRIVI: inbox di tutti i canali, ordinata per priorità, + ordini recenti.
 app.get('/', (req, res) => {
-  const tab = req.query.tab === 'tutti' ? 'tutti' : 'rispondere';
-  const sinceIso = new Date(Date.now() - 30 * 86400000).toISOString();
-  const source = Object.keys(M.SOURCE_LABEL).includes(req.query.canale) ? req.query.canale : undefined;
-  const threads = M.conversations(db, { sinceIso, onlyToAnswer: tab === 'rispondere', source });
-  const toAnswer = M.conversations(db, { sinceIso, onlyToAnswer: true }).length;
+  const view = I.VIEWS.includes(req.query.vista) ? req.query.vista : 'rispondere';
+  const source = Object.keys(M.SOURCE_LABEL).includes(req.query.canale) ? req.query.canale : '';
+  const rel = [...I.RELATIONSHIPS, 'sconosciuto'].includes(req.query.relazione) ? req.query.relazione : '';
+  const { threads, counts, hours } = I.inbox(db, { view, source: source || undefined, relationship: rel || undefined });
   const recentOrders = db.prepare(`
     SELECT o.*, c.name AS customer_name FROM orders o LEFT JOIN customers c ON c.id = o.customer_id
     WHERE o.created_at >= ? ORDER BY o.created_at DESC LIMIT 20`).all(new Date(Date.now() - 7 * 86400000).toISOString());
-  res.render('arrivals', { tab, source, threads, toAnswer, recentOrders, sync: syncInfo(), flash: req.query.sync ?? null });
+  const qs = new URLSearchParams({ vista: view, ...(source && { canale: source }), ...(rel && { relazione: rel }) }).toString();
+  res.render('arrivals', {
+    view, source, rel, threads, counts, hours, recentOrders, qs, sync: syncInfo(), flash: req.query.sync ?? null, ok: req.query.ok ?? null,
+  });
+});
+
+// Una conversazione: messaggi in ordine, scheda cliente in breve, azioni.
+app.get('/conversazione', (req, res) => {
+  const t = I.thread(db, String(req.query.k ?? ''));
+  if (!t) return res.status(404).render('notfound');
+  const summary = t.customer_id ? I.customerSummary(db, t.customer_id) : null;
+  const back = safeBack(req.query.da, '/');
+  const here = '/conversazione?k=' + encodeURIComponent(t.thread_key) + '&da=' + encodeURIComponent(back);
+  res.render('thread', { t, summary, back, here, flash: req.query.ok ?? null });
+});
+
+function safeBack(url, fallback) {
+  const u = String(url ?? '');
+  return u.startsWith('/') && !u.startsWith('//') ? u : fallback;
+}
+
+const ACTION_DONE = { chiudi: 'Conversazione chiusa.', rimanda: 'Conversazione rimandata.', attesa: 'Segnata come risposta: in attesa del cliente.', riapri: 'Conversazione riaperta.' };
+app.post('/conversazioni/stato', (req, res) => {
+  const key = String(req.body.k ?? '');
+  const action = String(req.body.azione ?? '');
+  try {
+    I.setThreadState(db, key, action, { days: req.body.giorni });
+  } catch (err) {
+    return res.status(400).send(err.message);
+  }
+  const back = safeBack(req.body.da, '/');
+  const sep = back.includes('?') ? '&' : '?';
+  res.redirect(back + sep + 'ok=' + encodeURIComponent(ACTION_DONE[action] || 'Fatto.'));
 });
 
 app.get('/clienti', (req, res) => {
   const q = String(req.query.q ?? '');
   const brand = String(req.query.brand ?? '');
-  const customers = C.searchCustomers(db, q, { brand });
+  const rel = I.RELATIONSHIPS.includes(req.query.relazione) ? req.query.relazione : '';
+  let customers = C.searchCustomers(db, q, { brand });
+  for (const c of customers) c.relationship = I.relationship(db, c.id).value;
+  if (rel) customers = customers.filter((c) => c.relationship === rel);
   const total = db.prepare('SELECT COUNT(*) FROM customers').pluck().get();
-  res.render('index', { q, brand, customers, total, sync: syncInfo(), flash: null });
+  res.render('index', { q, brand, rel, customers, total, sync: syncInfo(), flash: null });
 });
 
 // Aggiorna tutti i canali collegati, uno dopo l'altro.
@@ -239,6 +285,7 @@ app.get('/impostazioni', (req, res) => {
     backupCount: listBackups(backupDir()).length,
     metaPages: JSON.parse(getSetting(db, 'meta_pages') || '[]'),
     metaWarnings: JSON.parse(getSetting(db, 'meta_warnings') || '[]'),
+    urgency: I.urgencyHours(db),
     msg: req.query.msg ?? null, ok: req.query.ok === '1',
   });
 });
@@ -303,6 +350,12 @@ app.post('/impostazioni/instagram', async (req, res) => {
   }
 });
 
+app.post('/impostazioni/urgenza', (req, res) => {
+  I.setUrgencyHours(db, { chat: req.body.chat, email: req.body.email });
+  const h = I.urgencyHours(db);
+  res.redirect('/impostazioni?ok=1&msg=' + encodeURIComponent(`Urgenza: messaggi e commenti dopo ${h.chat} ore, email dopo ${h.email} ore.`));
+});
+
 app.post('/impostazioni/ignorati/rimuovi', (req, res) => {
   db.prepare('DELETE FROM ignored_senders WHERE pattern = ?').run(String(req.body.pattern ?? ''));
   res.redirect('/impostazioni');
@@ -342,9 +395,10 @@ function renderCustomer(res, id, extra = {}) {
   const itemsStmt = db.prepare('SELECT * FROM order_items WHERE order_id = ? ORDER BY rowid');
   for (const o of orders) o.items = itemsStmt.all(o.id);
   const reviews = db.prepare('SELECT * FROM review_items WHERE customer_id = ? AND resolved_at IS NULL').all(id);
-  const threads = M.conversations(db, { customerId: id, limit: 100 });
+  const threads = I.customerThreads(db, id);
+  const summary = I.customerSummary(db, id);
   res.status(extra.error ? 400 : 200).render('customer', {
-    customer, orders, reviews, threads, error: null, saved: false, contactForm: { type: 'email', value: '' }, ...extra,
+    customer, orders, reviews, threads, summary, error: null, saved: false, contactForm: { type: 'email', value: '' }, ...extra,
   });
 }
 
@@ -372,6 +426,15 @@ app.post('/customers/:id', (req, res) => {
     if (!(err instanceof C.UserError)) throw err;
     renderCustomer(res, id, { error: err.message });
   }
+});
+
+app.post('/customers/:id/relazione', (req, res) => {
+  const id = Number(req.params.id);
+  if (!C.getCustomer(db, id)) return res.status(404).render('notfound');
+  const v = String(req.body.relazione ?? '');
+  if (v && !I.RELATIONSHIPS.includes(v)) return res.status(400).send('Relazione non valida');
+  I.setRelationship(db, id, v);
+  res.redirect(safeBack(req.body.da, `/customers/${id}?saved=1`));
 });
 
 app.post('/customers/:id/contacts', (req, res) => {

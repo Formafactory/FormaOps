@@ -27,3 +27,9 @@ Valgono per ogni sessione di lavoro su questo repository.
 ## Piano
 1. Anagrafica clienti — 2. Ordini Vir3D (sola lettura) — 3. Gmail IMAP + schermata Arrivi —
 4. Meta: DM e commenti Facebook/Instagram, organici e inserzioni — 5. Sync automatica, backup, accesso remoto.
+6. Relationship Intelligence (relazione automatica + manuale) e Inbox con stati, urgenza e priorità.
+
+Visione complessiva (fasi successive, da autorizzare una alla volta): canali → Inbox unica → Customer 360 →
+Relationship Intelligence → motore delle decisioni → AI controllata (Read → Suggest → Prepare → Approve → Execute) → marketing.
+Le regole "niente AI" e "solo lettura" valgono finché Gianluca non autorizza esplicitamente la fase che le supera.
+La qualità di UX e interfaccia è un requisito, non un extra.
