@@ -40,8 +40,7 @@ test('prima sync: DM Messenger e Instagram, commenti a post e inserzioni, rispos
   assert.equal(r.ok, true, r.error);
   assert.deepEqual(r.bySource, { messenger: 4, instagram: 1, facebook_comment: 3, instagram_comment: 3 });
   assert.equal(r.nuovi, 11);
-  assert.equal(r.warnings.length, 1, 'De Artis senza permesso sulle inserzioni: avviso, non errore');
-  assert.match(r.warnings[0], /De Artis Digitale: commenti alle inserzioni/);
+  assert.deepEqual(r.warnings, []);
 
   // conversazione vecchia (60 giorni) esclusa, paginazione seguita (3 conversazioni, pagine da 2)
   assert.equal(one(db, `SELECT COUNT(*) FROM messages WHERE id = 'messenger:m5'`), 0);
@@ -67,6 +66,7 @@ test('solo richieste GET, mai scritture verso Meta', async (t) => {
   await syncMeta(db, { cfg: fake.cfg });
   assert.ok(fake.state.requests.length > 5);
   assert.ok(fake.state.requests.every((r) => r.method === 'GET'));
+  assert.ok(!fake.state.requests.some((r) => /ads_posts|[?&]ids=/.test(r.url)), 'niente ads_posts né parametro ids');
   const src = fs.readFileSync(path.join(__dirname, '..', 'lib', 'meta.js'), 'utf8');
   assert.equal((src.match(/method: '(\w+)'/g) || []).join(), "method: 'GET'");
 });
@@ -111,7 +111,7 @@ test('Meta chiede meno dati: la richiesta viene ripetuta con limiti ridotti', as
   assert.equal(r.ok, true, r.error);
   assert.equal(r.nuovi, 11);
   const limits = fake.state.requests.filter((q) => q.url.includes('/conversations')).map((q) => new URL(q.url, 'http://x').searchParams.get('limit'));
-  assert.ok(limits.includes('10') && limits.includes('2'), `limiti usati: ${limits}`);
+  assert.ok(limits.includes('25') && limits.includes('3'), `limiti usati: ${limits}`);
 });
 
 test('Meta lenta a rispondere: si riprova con meno dati invece di fallire', async (t) => {
@@ -124,9 +124,10 @@ test('Meta lenta a rispondere: si riprova con meno dati invece di fallire', asyn
 
 test('un errore temporaneo su una sezione non blocca le altre', async (t) => {
   const { fake, db } = await setup(t);
-  fake.state.data.posts['P1:ads_posts'] = { error: { code: 2, message: 'Service temporarily unavailable' } };
+  fake.state.data.media.IG1 = { error: { code: 2, message: 'Service temporarily unavailable' } };
   const r = await syncMeta(db, { cfg: fake.cfg });
   assert.equal(r.ok, true, r.error);
-  assert.equal(r.nuovi, 10, 'tutto tranne il commento all\'inserzione Facebook');
-  assert.ok(r.warnings.some((w) => /Vir3D: commenti alle inserzioni/.test(w)), r.warnings.join(' | '));
+  assert.equal(r.bySource.messenger, 4);
+  assert.equal(r.bySource.facebook_comment, 3);
+  assert.ok(r.warnings.some((w) => /Vir3D: commenti Instagram/.test(w)), r.warnings.join(' | '));
 });

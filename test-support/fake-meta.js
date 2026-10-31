@@ -57,7 +57,8 @@ function defaultData(now = Date.now()) {
       ],
     },
     adaccounts: [{ id: 'act_1', name: 'Vir3D Ads' }],
-    ads: { act_1: [{ id: 'ad1', creative: { effective_instagram_media_id: 'MAD1' } }, { id: 'ad2', creative: { effective_instagram_media_id: 'M1' } }] },
+    ads: { act_1: [{ id: 'ad1', creative: { effective_instagram_media_id: 'MAD1' } }, { id: 'ad2', creative: { effective_instagram_media_id: 'M1', effective_object_story_id: 'P1_post1' } },
+      { id: 'ad3', creative: { effective_object_story_id: 'P1_ad1' } }] },
     adMedia: {
       MAD1: { id: 'MAD1', caption: 'Inserzione: ambigramma per la festa della mamma', permalink: 'https://instagram.com/p/MAD1',
         timestamp: d(now, 20), owner: { id: 'IG1' },
@@ -106,6 +107,20 @@ function startFakeMeta(data = defaultData()) {
       return send(200, out);
     }
     const [id, edge] = parts;
+    if (id && !edge) {
+      const convs = Object.values(data.conversations).flat();
+      const conv = convs.find((c) => c.id === id);
+      if (conv) return send(200, { id: conv.id, messages: conv.messages });
+      const posts = Object.values(data.posts).filter(Array.isArray).flat();
+      const post = posts.find((x) => x.id === id);
+      if (post) {
+        if (pageTokens[token] !== id.split('_')[0]) return send(400, { error: { code: 190, message: 'Page token required' } });
+        return send(200, post);
+      }
+      const media = [...Object.values(data.media).flat(), ...Object.values(data.adMedia)].find((m) => m.id === id);
+      if (media) return send(200, media);
+      return send(404, { error: { code: 803, message: `Unknown object ${id}` } });
+    }
     if (state.maxLimit && Number(url.searchParams.get('limit')) > state.maxLimit) {
       return send(500, { error: { code: 1, message: "Please reduce the amount of data you're asking for, then retry your request" } });
     }
