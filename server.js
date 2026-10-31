@@ -14,7 +14,7 @@ const { syncVir3d, getState } = require('./lib/sync-vir3d');
 const vir3d = require('./lib/vir3d');
 const { getSetting, setSetting, vir3dConfig } = require('./lib/settings');
 const { syncGmail, gmailConfig, testConnection } = require('./lib/sync-gmail');
-const { syncMeta, metaConfig, testConnection: testMeta } = require('./lib/sync-meta');
+const { syncMeta, metaConfig, testConnection: testMeta, testInstagramToken } = require('./lib/sync-meta');
 const M = require('./lib/messages');
 const { normalizeEmail } = require('./lib/normalize');
 const { runBackup, listBackups } = require('./lib/backup');
@@ -228,6 +228,9 @@ app.get('/impostazioni', (req, res) => {
     metaHasToken: Boolean(metaConfig(db).token),
     metaDays: metaConfig(db).days,
     igDm: metaConfig(db).igDm,
+    igHasToken: Boolean(metaConfig(db).igToken),
+    igUsername: getSetting(db, 'ig_username') || '',
+    igRefreshed: getSetting(db, 'ig_token_refreshed_at'),
     autoMinutes: scheduler.state.minutes,
     backupDirSetting: getSetting(db, 'backup_dir') || '',
     backupDirEffective: backupDir(),
@@ -279,6 +282,24 @@ app.post('/impostazioni/meta', async (req, res) => {
       `Facebook e Instagram collegati in lettura: ${names}. Ora vai su Arrivi e premi "Aggiorna".`));
   } catch (err) {
     res.redirect('/impostazioni?msg=' + encodeURIComponent(err.message));
+  }
+});
+
+app.post('/impostazioni/instagram', async (req, res) => {
+  const token = String(req.body.token ?? '').replace(/\s+/g, '');
+  if (req.body.remove) {
+    setSetting(db, 'ig_token', '');
+    return res.redirect('/impostazioni?ok=1&msg=' + encodeURIComponent('Chiave Instagram rimossa.'));
+  }
+  if (token) { setSetting(db, 'ig_token', token); setSetting(db, 'ig_token_refreshed_at', new Date().toISOString()); }
+  try {
+    const me = await testInstagramToken(metaConfig(db));
+    setSetting(db, 'ig_username', me.username);
+    res.redirect('/impostazioni?ok=1&msg=' + encodeURIComponent(
+      `DM Instagram collegati in lettura: @${me.username}. Arriveranno al prossimo aggiornamento.`));
+  } catch (err) {
+    const msg = err.fatal ? 'Instagram ha rifiutato la chiave: è scaduta o non valida. Rigenerala (guida, passo 2).' : `Instagram: ${err.message}`;
+    res.redirect('/impostazioni?msg=' + encodeURIComponent(msg));
   }
 });
 

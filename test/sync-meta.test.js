@@ -139,3 +139,26 @@ test('connessione che cade ogni tanto: le richieste vengono ripetute', async (t)
   assert.equal(r.ok, true, r.error);
   assert.equal(r.nuovi, 11, r.warnings.join(' | '));
 });
+
+test('DM Instagram con la chiave Instagram: letti, abbinati, rinnovo settimanale della chiave', async (t) => {
+  const { fake, db } = await setup(t);
+  const { startFakeInstagram } = require('../test-support/fake-instagram');
+  const ig = await startFakeInstagram();
+  t.after(() => ig.close());
+  process.env.IG_GRAPH_BASE = ig.base;
+  t.after(() => { delete process.env.IG_GRAPH_BASE; });
+  const { setSetting, getSetting } = require('../lib/settings');
+  setSetting(db, 'ig_token', 'IGtoken');
+  setSetting(db, 'ig_token_refreshed_at', new Date(Date.now() - 8 * 86400000).toISOString());
+  const r = await syncMeta(db, { cfg: { ...fake.cfg, igToken: 'IGtoken' } });
+  assert.equal(r.ok, true, r.error);
+  assert.equal(ig.state.refreshed, 1, 'chiave più vecchia di 7 giorni: rinnovata');
+  assert.equal(getSetting(db, 'ig_token'), 'IGtoken-r1');
+  const igRows = db.prepare(`SELECT id, direction, counterpart_address, customer_id FROM messages WHERE source = 'instagram' ORDER BY id`).all();
+  assert.deepEqual(igRows.map((x) => x.id), ['instagram:imA1', 'instagram:imA2', 'instagram:imB1'], 'conversazione di 40 giorni fa esclusa');
+  assert.equal(igRows.find((x) => x.id === 'instagram:imA1').direction, 'out');
+  assert.equal(igRows.find((x) => x.id === 'instagram:imA2').customer_id, 1, 'anna.verdi riconosciuta');
+  assert.equal(igRows.find((x) => x.id === 'instagram:imB1').counterpart_address, 'marco_b');
+  assert.ok(ig.state.requests.every((q) => q.method === 'GET'));
+  assert.ok(!fake.state.requests.some((q) => /platform=instagram/.test(q.url)), 'con la chiave Instagram non usa la vecchia strada');
+});

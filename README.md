@@ -49,6 +49,11 @@ Guida passo passo: [docs/collegare-meta.md](docs/collegare-meta.md). La chiave d
 **Impostazioni** → Facebook e Instagram. FormaOps legge Messenger, DM Instagram e commenti a post e inserzioni,
 e non usa mai la chiave per rispondere o pubblicare.
 
+## DM Instagram
+
+Si leggono con una chiave dell'account Instagram (API con login Instagram): guida in
+[docs/collegare-instagram-dm.md](docs/collegare-instagram-dm.md). La chiave si rinnova da sola ogni settimana.
+
 ## Aggiornamento automatico, backup, avvio con Windows
 
 - Mentre FormaOps è acceso aggiorna da solo ordini, email e messaggi (di base ogni 15 minuti, modificabile in Impostazioni). La pagina Arrivi si ricarica da sola ogni 3 minuti.
@@ -80,4 +85,5 @@ npm test
 - Blocco 3 — Gmail in sola lettura e schermata Arrivi: fatto.
 - Blocco 4 — Facebook e Instagram (DM e commenti, anche inserzioni), filtri email: fatto.
 - Blocco 5 — aggiornamento automatico, backup giornaliero, avvio con Windows: fatto.
-- Da fare: DM Instagram (via API con login Instagram), Pagina De Artis, accesso dal telefono.
+- DM Instagram via API con login Instagram: fatto.
+- Da fare: Pagina De Artis, accesso dal telefono.
