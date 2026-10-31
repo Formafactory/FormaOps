@@ -68,10 +68,11 @@ function defaultData(now = Date.now()) {
 }
 
 function startFakeMeta(data = defaultData()) {
-  const state = { data, requests: [], pageSize: 2, maxLimit: null, slowAbove: null };
+  const state = { data, requests: [], pageSize: 2, maxLimit: null, slowAbove: null, dropEvery: 0 };
   let base;
   const server = http.createServer(async (req, res) => {
     state.requests.push({ method: req.method, url: req.url });
+    if (state.dropEvery && state.requests.length % state.dropEvery === 0) { req.socket.destroy(); return; }
     const lim = Number(new URL(req.url, 'http://x').searchParams.get('limit'));
     if (state.slowAbove && lim > state.slowAbove) await new Promise((r) => setTimeout(r, 1500));
     const send = (code, body) => { res.writeHead(code, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)); };

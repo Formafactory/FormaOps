@@ -131,3 +131,11 @@ test('un errore temporaneo su una sezione non blocca le altre', async (t) => {
   assert.equal(r.bySource.facebook_comment, 3);
   assert.ok(r.warnings.some((w) => /Vir3D: commenti Instagram/.test(w)), r.warnings.join(' | '));
 });
+
+test('connessione che cade ogni tanto: le richieste vengono ripetute', async (t) => {
+  const { fake, db } = await setup(t);
+  fake.state.dropEvery = 4;
+  const r = await syncMeta(db, { cfg: { ...fake.cfg, retryDelayMs: 10 } });
+  assert.equal(r.ok, true, r.error);
+  assert.equal(r.nuovi, 11, r.warnings.join(' | '));
+});
