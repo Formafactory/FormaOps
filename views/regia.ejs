@@ -24,7 +24,7 @@
     <div class="t">
       <h2>Per te</h2>
       <% if (perTe.length) { %><span class="count"><%= perTe.length %></span><% } %>
-      <span class="sub">chi aspetta una tua risposta, il più importante in alto</span>
+      <span class="sub">chi ti ha scritto negli ultimi <%= days %> giorni e aspetta una risposta, il più importante in alto</span>
     </div>
   </div>
 
@@ -80,15 +80,21 @@
   <div class="sec-head">
     <div class="t">
       <h2>Il flusso</h2>
-      <span class="sub"><%= show === 'rimandate' ? 'conversazioni rimandate, in ordine di ritorno' : show === 'chiuse' ? 'conversazioni chiuse' : 'tutto il resto che si è mosso nelle ultime 48 ore' %></span>
+      <span class="sub"><%= show === 'arretrate' ? 'senza risposta da più di ' + days + ' giorni' : show === 'rimandate' ? 'conversazioni rimandate, in ordine di ritorno' : show === 'chiuse' ? 'conversazioni chiuse' : 'tutto il resto che si è mosso nelle ultime 48 ore' %></span>
     </div>
     <div class="links">
       <a href="/" class="<%= show === 'recenti' ? 'on' : '' %>">Ultime 48 ore</a>
+ <a href="/?mostra=arretrate" class="<%= show === 'arretrate' ? 'on' : '' %>">Arretrate (<%= stats.arretrate %>)</a>
       <a href="/?mostra=rimandate" class="<%= show === 'rimandate' ? 'on' : '' %>">Rimandate (<%= stats.rimandate %>)</a>
       <a href="/?mostra=chiuse" class="<%= show === 'chiuse' ? 'on' : '' %>">Chiuse (<%= stats.chiuse %>)</a>
     </div>
   </div>
 
+  <% if (show === 'arretrate' && flow.length) { %>
+    <form method="post" action="/conversazioni/chiudi-arretrate" style="margin-bottom: 12px" onsubmit="return confirm('Chiudere tutte le <%= flow.length %> conversazioni arretrate? Se qualcuno riscrive, torna in Per te.')">
+      <button type="submit" class="secondary">Chiudi tutte le arretrate (<%= flow.length %>)</button>
+    </form>
+  <% } %>
   <% if (!flow.length) { %>
     <p class="empty"><%= show === 'recenti' ? 'Niente di nuovo nelle ultime 48 ore.' : 'Nessuna conversazione qui.' %></p>
   <% } else { %>

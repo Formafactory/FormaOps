@@ -150,7 +150,7 @@ app.get('/spazio/:brand', (req, res) => {
 // REGIA: "Per te" (chi aspetta una tua risposta, con il motivo) e "Il flusso" (tutto il resto che si muove).
 app.get('/', (req, res) => {
   const brand = res.locals.brand;
-  const show = ['rimandate', 'chiuse'].includes(req.query.mostra) ? req.query.mostra : 'recenti';
+  const show = ['rimandate', 'chiuse', 'arretrate'].includes(req.query.mostra) ? req.query.mostra : 'recenti';
   const r = I.regia(db, { brand, show });
   const si = syncInfo();
   const errors = [];
@@ -183,6 +183,11 @@ function safeBack(url, fallback) {
 }
 
 const ACTION_DONE = { chiudi: 'Conversazione chiusa.', rimanda: 'Conversazione rimandata.', attesa: 'Segnata come risposta: in attesa del cliente.', riapri: 'Conversazione riaperta.' };
+app.post('/conversazioni/chiudi-arretrate', (req, res) => {
+  const n = I.closeArretrate(db, res.locals.brand);
+  res.redirect('/?mostra=chiuse&ok=' + encodeURIComponent(`${n} conversazioni arretrate chiuse. Se qualcuno riscrive, torna in "Per te".`));
+});
+
 app.post('/conversazioni/stato', (req, res) => {
   const key = String(req.body.k ?? '');
   const action = String(req.body.azione ?? '');
@@ -360,6 +365,7 @@ app.get('/impostazioni', (req, res) => {
     metaPages: JSON.parse(getSetting(db, 'meta_pages') || '[]'),
     metaWarnings: JSON.parse(getSetting(db, 'meta_warnings') || '[]'),
     urgency: I.urgencyHours(db),
+    perTeDays: I.perTeDays(db),
     msg: req.query.msg ?? null, ok: req.query.ok === '1',
   });
 });
@@ -431,8 +437,10 @@ app.post('/impostazioni/instagram', async (req, res) => {
 
 app.post('/impostazioni/urgenza', (req, res) => {
   I.setUrgencyHours(db, { chat: req.body.chat, email: req.body.email });
+  if (req.body.giorni) I.setPerTeDays(db, req.body.giorni);
   const h = I.urgencyHours(db);
-  res.redirect('/impostazioni?ok=1&msg=' + encodeURIComponent(`Urgenza: messaggi e commenti dopo ${h.chat} ore, email dopo ${h.email} ore.`));
+  res.redirect('/impostazioni?ok=1&msg=' + encodeURIComponent(
+    `"Per te" mostra gli ultimi ${I.perTeDays(db)} giorni. Urgenza: messaggi e commenti dopo ${h.chat} ore, email dopo ${h.email} ore.`));
 });
 
 app.post('/impostazioni/ignorati/rimuovi', (req, res) => {

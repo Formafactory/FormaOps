@@ -95,9 +95,11 @@
 </section>
 
 <section class="card">
-  <h2>Urgenza</h2>
+  <h2>Per te e urgenza</h2>
   <p class="small">Dopo quante ore senza risposta una conversazione diventa urgente e sale in cima a "Per te". Chi ha un ordine in corso sta comunque sempre in alto.</p>
   <form class="form" method="post" action="/impostazioni/urgenza">
+    <label>In "Per te" mostra chi ha scritto negli ultimi <input name="giorni" type="number" min="1" max="90" value="<%= perTeDays %>" style="width:90px"> giorni
+      <span class="muted small" style="font-weight:normal; display: block">Le conversazioni più vecchie senza risposta restano nella vista "Arretrate" del flusso.</span></label>
     <label>Messaggi e commenti di Facebook e Instagram <span><input name="chat" type="number" min="1" max="720" value="<%= urgency.chat %>" style="width:90px"> ore</span></label>
     <label>Email <span><input name="email" type="number" min="1" max="720" value="<%= urgency.email %>" style="width:90px"> ore</span></label>
     <div class="actions"><button type="submit">Salva</button></div>

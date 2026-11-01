@@ -93,3 +93,23 @@ test('Il flusso: risposte, rimandate e chiuse delle ultime 48 ore, più i nuovi 
   I.setThreadState(db, 'APERTA', 'rimanda', { days: 7, now: NOW });
   assert.deepEqual(I.regia(db, { brand: 'vir3d', show: 'rimandate', now: NOW }).flow.map((f) => f.thread.thread_key), ['APERTA']);
 });
+
+test('Per te: solo chi ha scritto negli ultimi 7 giorni; il resto in "Arretrate", chiudibile in blocco', () => {
+  const db = freshDb();
+  msg(db, { thread: 'RECENTE', h: 24 * 3 });
+  msg(db, { thread: 'VECCHIA', h: 24 * 25, who: 'b@example.it' });
+  msg(db, { thread: 'RISCRIVE', h: 24 * 30, who: 'c@example.it' });
+  msg(db, { thread: 'RISCRIVE', h: 24 * 2, who: 'c@example.it' });
+  M.assignBrands(db);
+  const r = I.regia(db, { brand: 'vir3d', now: NOW });
+  assert.deepEqual(r.perTe.map((t) => t.thread_key).sort(), ['RECENTE', 'RISCRIVE'], 'chi riscrive dopo 30 giorni torna dentro');
+  assert.equal(r.stats.arretrate, 1);
+  assert.deepEqual(I.regia(db, { brand: 'vir3d', show: 'arretrate', now: NOW }).flow.map((f) => f.thread.thread_key), ['VECCHIA']);
+  assert.equal(I.perTeCount(db, 'vir3d', NOW).n, 2);
+  setSetting(db, 'perte_days', '30');
+  assert.equal(I.regia(db, { brand: 'vir3d', now: NOW }).perTe.length, 3, 'giorni modificabili');
+  setSetting(db, 'perte_days', '7');
+  assert.equal(I.closeArretrate(db, 'vir3d', NOW), 1);
+  assert.equal(I.regia(db, { brand: 'vir3d', now: NOW }).stats.arretrate, 0);
+  assert.deepEqual(I.regia(db, { brand: 'vir3d', show: 'chiuse', now: NOW }).flow.map((f) => f.thread.thread_key), ['VECCHIA']);
+});
