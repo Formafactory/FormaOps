@@ -51,6 +51,7 @@ e non usa mai la chiave per rispondere o pubblicare.
 
 ## DM Instagram
 
+In pausa: la pagina di Meta che genera la chiave dà errore sul portfolio vir3ditalia (novembre 2026). Il codice è pronto.
 Si leggono con una chiave dell'account Instagram (API con login Instagram): guida in
 [docs/collegare-instagram-dm.md](docs/collegare-instagram-dm.md). La chiave si rinnova da sola ogni settimana.
 
@@ -59,6 +60,11 @@ Si leggono con una chiave dell'account Instagram (API con login Instagram): guid
 - Mentre FormaOps è acceso aggiorna da solo ordini, email e messaggi (di base ogni 15 minuti, modificabile in Impostazioni). La Regia si ricarica da sola ogni 3 minuti.
 - Un backup al giorno del database nella cartella scelta in Impostazioni (consigliata una cartella di Google Drive); si tengono gli ultimi 30. Per ripristinare: chiudi FormaOps e copia il backup al posto di `formaops-data\formaops.sqlite`.
 - Doppio clic su `avvio-automatico-con-windows.bat` (una volta sola): FormaOps parte da solo, ridotto a icona, quando accendi il PC.
+
+## Dal telefono
+
+Con Tailscale (gratuito), senza aprire FormaOps a internet né al Wi-Fi del laboratorio: guida in
+[docs/accesso-dal-telefono.md](docs/accesso-dal-telefono.md). Sul telefono il menu diventa una barra compatta in alto.
 
 ## Le schermate
 
@@ -101,4 +107,5 @@ npm test
 - DM Instagram via API con login Instagram: fatto.
 - Blocco 6 — Relationship Intelligence e Inbox con stati e urgenza: fatto.
 - Blocco 7 — spazi separati Vir3D / De Artis, Regia (Per te + Il flusso), nuova interfaccia: fatto.
-- Da fare: DM Instagram (chiave), Gmail e Pagina De Artis, accesso dal telefono.
+- Accesso dal telefono con Tailscale (guida) e versione mobile compatta: fatto.
+- In pausa: DM Instagram (errore della pagina Meta). Da collegare: Gmail e Pagina De Artis.

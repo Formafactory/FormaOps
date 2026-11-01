@@ -215,8 +215,14 @@ a.frow:hover { background: #fafbfc; }
   .content { padding: 20px 16px 48px; }
   .pcard { grid-template-columns: 1fr; }
   .pcard .right { align-items: flex-start; }
-  .side { gap: 16px; padding: 16px; }
-  .channels { display: none; }
+  /* Telefono: il menu diventa una barra compatta in alto, il contenuto arriva subito. */
+  .side { flex: 1 1 100%; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 10px 12px; padding: 12px 14px;
+          border-right: 0; border-bottom: 1px solid var(--line); }
+  .side .spaces { margin-left: auto; width: 220px; }
+  .side .main-nav { flex: 1 1 100%; flex-direction: row; overflow-x: auto; gap: 4px; }
+  .side .main-nav a { padding: 7px 11px; white-space: nowrap; gap: 6px; }
+  .side .later-group, .side .new, .channels { display: none; }
+  .page-head .right { width: 100%; justify-content: space-between; }
 }
 @media (max-width: 700px) {
   table.list, .list tbody, .list tr, .list td { display: block; width: auto; }
@@ -228,7 +234,6 @@ a.frow:hover { background: #fafbfc; }
   .frow { grid-template-columns: 1fr; gap: 2px; }
   .frow.head { display: none; }
   .frow .what { white-space: normal; }
-  .side .later, .side .nav-title { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 .form label:has(> input[type=number]), .form label:has(> span > input[type=number]) { display: block; }

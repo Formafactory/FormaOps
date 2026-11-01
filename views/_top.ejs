@@ -24,7 +24,7 @@
     <% }) %>
   </nav>
 
-  <nav class="nav" aria-label="Sezioni">
+  <nav class="nav main-nav" aria-label="Sezioni">
     <a href="/" class="<%= sec === 'regia' ? 'on' : '' %>">Regia<% if (nav.perTe[brand].n) { %><span class="badge <%= nav.perTe[brand].urgent ? 'hot' : '' %>"><%= nav.perTe[brand].n %></span><% } %></a>
     <a href="/clienti" class="<%= sec === 'clienti' ? 'on' : '' %>">Clienti</a>
     <a href="/da-collegare" class="<%= sec === 'collegare' ? 'on' : '' %>">Da collegare<% if (nav.unlinked) { %><span class="badge"><%= nav.unlinked %></span><% } %></a>
@@ -32,7 +32,7 @@
     <a href="/impostazioni" class="<%= sec === 'impostazioni' ? 'on' : '' %>">Impostazioni</a>
   </nav>
 
-  <div class="nav">
+  <div class="nav later-group">
     <div class="nav-title">In arrivo</div>
     <span class="later">Regole</span>
     <span class="later">Assistente AI</span>
