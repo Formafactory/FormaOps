@@ -38,9 +38,8 @@ test('prima sync: DM Messenger e Instagram, commenti a post e inserzioni, rispos
   const { fake, db } = await setup(t);
   const r = await syncMeta(db, { cfg: fake.cfg });
   assert.equal(r.ok, true, r.error);
-  assert.deepEqual(r.bySource, { messenger: 4, instagram: 1, facebook_comment: 3, instagram_comment: 3 });
-  assert.equal(r.nuovi, 11);
-  assert.deepEqual(r.warnings, []);
+  assert.deepEqual(r.bySource, { messenger: 4, instagram: 1, facebook_comment: 4, instagram_comment: 3 });
+  assert.equal(r.nuovi, 12);
 
   // conversazione vecchia (60 giorni) esclusa, paginazione seguita (3 conversazioni, pagine da 2)
   assert.equal(one(db, `SELECT COUNT(*) FROM messages WHERE id = 'messenger:m5'`), 0);
@@ -49,15 +48,17 @@ test('prima sync: DM Messenger e Instagram, commenti a post e inserzioni, rispos
   // DM Instagram collegato al cliente esistente per username
   assert.equal(one(db, `SELECT customer_id FROM messages WHERE id = 'instagram:im1'`), 1);
 
-  // commenti della Pagina stessa e con autore nascosto saltati; risposta della Pagina = "out"
-  assert.equal(one(db, `SELECT COUNT(*) FROM messages WHERE id IN ('fbcomment:fc3','fbcomment:fc4')`), 0);
+  // commento della Pagina stessa saltato; autore nascosto da Meta: mostrato come "Utente Facebook"; risposta della Pagina = "out"
+  assert.equal(one(db, `SELECT COUNT(*) FROM messages WHERE id = 'fbcomment:fc3'`), 0);
+  assert.equal(one(db, `SELECT counterpart_name FROM messages WHERE id = 'fbcomment:fc4'`), 'Utente Facebook (nome nascosto da Meta)');
+  assert.ok(r.warnings.some((w) => /pages_read_user_content/.test(w)), 'avviso sul permesso mancante');
   assert.equal(one(db, `SELECT direction FROM messages WHERE id = 'fbcomment:fc2'`), 'out');
   assert.equal(one(db, `SELECT direction FROM messages WHERE id = 'igcomment:ig2'`), 'out');
   assert.match(one(db, `SELECT subject FROM messages WHERE id = 'fbcomment:fc5'`), /^Commento all'inserzione: Il regalo perfetto/);
   assert.match(one(db, `SELECT subject FROM messages WHERE id = 'igcomment:ig3'`), /^Commento all'inserzione: Inserzione: ambigramma/);
 
   const toAnswer = M.conversations(db, { onlyToAnswer: true }).map((c) => c.counterpart_name || c.counterpart_address).sort();
-  assert.deepEqual(toAnswer, ['Mario Rossi', 'Paolo Verde', 'anna.verdi', 'sara.m'],
+  assert.deepEqual(toAnswer, ['Mario Rossi', 'Paolo Verde', 'Utente Facebook (nome nascosto da Meta)', 'anna.verdi', 'sara.m'],
     'Lucia (risposta della Pagina), Giulia e marco_b (risposti nei commenti) non sono da rispondere');
 });
 
@@ -89,7 +90,7 @@ test('collegare un profilo Facebook a un cliente; ignorare un profilo Instagram'
   const { fake, db } = await setup(t);
   await syncMeta(db, { cfg: fake.cfg });
   const before = M.unlinkedSenders(db).map((s) => `${s.type}:${s.name || s.address}`).sort();
-  assert.deepEqual(before, ['facebook:Giulia Neri', 'facebook:Lucia Bianchi', 'facebook:Mario Rossi', 'facebook:Paolo Verde',
+  assert.deepEqual(before, ['facebook:Giulia Neri', 'facebook:Lucia Bianchi', 'facebook:Mario Rossi', 'facebook:Paolo Verde', 'facebook:Utente Facebook (nome nascosto da Meta)',
     'instagram:marco_b', 'instagram:sara.m']);
 
   const mario = C.createCustomer(db, { name: 'Mario Rossi', brand: 'vir3d', email: 'mario@example.it' });
@@ -109,7 +110,7 @@ test('Meta chiede meno dati: la richiesta viene ripetuta con limiti ridotti', as
   fake.state.maxLimit = 3;
   const r = await syncMeta(db, { cfg: fake.cfg });
   assert.equal(r.ok, true, r.error);
-  assert.equal(r.nuovi, 11);
+  assert.equal(r.nuovi, 12);
   const limits = fake.state.requests.filter((q) => q.url.includes('/conversations')).map((q) => new URL(q.url, 'http://x').searchParams.get('limit'));
   assert.ok(limits.includes('25') && limits.includes('3'), `limiti usati: ${limits}`);
 });
@@ -119,7 +120,7 @@ test('Meta lenta a rispondere: si riprova con meno dati invece di fallire', asyn
   fake.state.slowAbove = 3;
   const r = await syncMeta(db, { cfg: { ...fake.cfg, timeoutMs: 400 } });
   assert.equal(r.ok, true, r.error);
-  assert.equal(r.nuovi, 11);
+  assert.equal(r.nuovi, 12);
 });
 
 test('un errore temporaneo su una sezione non blocca le altre', async (t) => {
@@ -128,7 +129,7 @@ test('un errore temporaneo su una sezione non blocca le altre', async (t) => {
   const r = await syncMeta(db, { cfg: fake.cfg });
   assert.equal(r.ok, true, r.error);
   assert.equal(r.bySource.messenger, 4);
-  assert.equal(r.bySource.facebook_comment, 3);
+  assert.equal(r.bySource.facebook_comment, 4);
   assert.ok(r.warnings.some((w) => /Vir3D: commenti Instagram/.test(w)), r.warnings.join(' | '));
 });
 
@@ -137,7 +138,7 @@ test('connessione che cade ogni tanto: le richieste vengono ripetute', async (t)
   fake.state.dropEvery = 4;
   const r = await syncMeta(db, { cfg: { ...fake.cfg, retryDelayMs: 10 } });
   assert.equal(r.ok, true, r.error);
-  assert.equal(r.nuovi, 11, r.warnings.join(' | '));
+  assert.equal(r.nuovi, 12, r.warnings.join(' | '));
 });
 
 test('DM Instagram con la chiave Instagram: letti, abbinati, rinnovo settimanale della chiave', async (t) => {
@@ -161,4 +162,17 @@ test('DM Instagram con la chiave Instagram: letti, abbinati, rinnovo settimanale
   assert.equal(igRows.find((x) => x.id === 'instagram:imB1').counterpart_address, 'marco_b');
   assert.ok(ig.state.requests.every((q) => q.method === 'GET'));
   assert.ok(!fake.state.requests.some((q) => /platform=instagram/.test(q.url)), 'con la chiave Instagram non usa la vecchia strada');
+});
+
+test('commenti: a ogni giro si rileggono gli ultimi giorni, così un commento sfuggito al giro prima non si perde', async (t) => {
+  const { fake, db } = await setup(t);
+  await syncMeta(db, { cfg: fake.cfg });
+  // commento di 3 giorni fa che il giro precedente non aveva visto (es. comparso in ritardo su Meta)
+  fake.state.data.posts['P1:published_posts'][0].comments.data.push(
+    { id: 'fc9', created_time: new Date(Date.now() - 3 * 86400000).toISOString(), from: { id: 'U9', name: 'Rita Blu' }, message: 'Fate spedizioni a Malta?' });
+  const r = await syncMeta(db, { cfg: fake.cfg });
+  assert.equal(r.nuovi, 1);
+  assert.equal(one(db, `SELECT counterpart_name FROM messages WHERE id = 'fbcomment:fc9'`), 'Rita Blu');
+  const stats = JSON.parse(one(db, `SELECT value FROM settings WHERE key = 'meta_comment_stats'`));
+  assert.ok(stats.fbComments >= 4 && stats.fbHidden === 1, JSON.stringify(stats));
 });
