@@ -176,3 +176,15 @@ test('commenti: a ogni giro si rileggono gli ultimi giorni, così un commento sf
   const stats = JSON.parse(one(db, `SELECT value FROM settings WHERE key = 'meta_comment_stats'`));
   assert.ok(stats.fbComments >= 4 && stats.fbHidden === 1, JSON.stringify(stats));
 });
+
+test('commento salvato senza autore: quando Meta mostra il nome, viene completato', async (t) => {
+  const { fake, db } = await setup(t);
+  await syncMeta(db, { cfg: fake.cfg });
+  assert.equal(one(db, `SELECT counterpart_address FROM messages WHERE id = 'fbcomment:fc4'`), 'fb:anonimo-fc4');
+  const fc4 = fake.state.data.posts['P1:published_posts'][0].comments.data.find((c) => c.id === 'fc4');
+  fc4.from = { id: 'U7', name: 'Teresa Gialli' };
+  await syncMeta(db, { cfg: fake.cfg });
+  assert.deepEqual(db.prepare(`SELECT counterpart_address, counterpart_name FROM messages WHERE id = 'fbcomment:fc4'`).get(),
+    { counterpart_address: 'fb:U7', counterpart_name: 'Teresa Gialli' });
+  assert.equal(one(db, `SELECT COUNT(*) FROM messages WHERE id = 'fbcomment:fc4'`), 1);
+});
