@@ -189,10 +189,12 @@ app.post('/conversazioni/chiudi-arretrate', (req, res) => {
 });
 
 app.post('/conversazioni/stato', (req, res) => {
-  const key = String(req.body.k ?? '');
+  // Una scheda di "Per te" può raggruppare più conversazioni della stessa persona: l'azione vale per tutte.
+  const keys = [].concat(req.body.k ?? []).map(String).filter(Boolean);
   const action = String(req.body.azione ?? '');
   try {
-    I.setThreadState(db, key, action, { days: req.body.giorni });
+    if (!keys.length) throw new Error('Conversazione mancante');
+    db.transaction(() => { for (const key of keys) I.setThreadState(db, key, action, { days: req.body.giorni }); })();
   } catch (err) {
     return res.status(400).send(err.message);
   }

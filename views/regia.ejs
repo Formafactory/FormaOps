@@ -41,6 +41,11 @@
           <span class="meta">&ensp;<%= SOURCE_LABEL[t.source] || t.source %><% if (t.customer_id && t.relationship !== 'b2b') { %>, <%= RELATIONSHIP_LABEL[t.relationship].toLowerCase() %><% } %></span>
           <div><span class="reason reason-<%= t.reason.kind %>"><%= t.reason.label %></span></div>
           <p class="snip"><%= t.snippet || t.subject %></p>
+          <% if (t.others.length) { %>
+            <div class="also">Anche <%= t.others.length === 1 ? 'un\'altra conversazione' : t.others.length + ' altre conversazioni' %>:
+              <% t.others.forEach(function (o, i) { %><a href="/conversazione?k=<%= encodeURIComponent(o.thread_key) %>"><%= o.subject || SOURCE_LABEL[o.source] %></a><%= i < t.others.length - 1 ? ', ' : '' %><% }) %>
+            </div>
+          <% } %>
         </div>
         <div class="right">
           <span class="wait <%= t.urgent ? 'hot' : '' %>" title="Dal <%= when(t.waiting_since) %>">aspetta <%= waitedLong(t.waited_hours) %></span>
@@ -49,14 +54,14 @@
               <summary>Altro</summary>
               <div class="menu">
                 <form method="post" action="/conversazioni/stato">
-                  <input type="hidden" name="k" value="<%= t.thread_key %>"><input type="hidden" name="da" value="<%= here %>">
+                  <% t.keys.forEach(function (k) { %><input type="hidden" name="k" value="<%= k %>"><% }) %><input type="hidden" name="da" value="<%= here %>">
                   <button class="quiet" name="azione" value="attesa">Ho già risposto altrove</button>
                   <button class="quiet" name="azione" value="chiudi">Chiudi senza rispondere</button>
                 </form>
                 <hr>
                 <div class="lbl">Rimanda</div>
                 <form method="post" action="/conversazioni/stato">
-                  <input type="hidden" name="k" value="<%= t.thread_key %>"><input type="hidden" name="da" value="<%= here %>"><input type="hidden" name="azione" value="rimanda">
+                  <% t.keys.forEach(function (k) { %><input type="hidden" name="k" value="<%= k %>"><% }) %><input type="hidden" name="da" value="<%= here %>"><input type="hidden" name="azione" value="rimanda">
                   <button class="quiet" name="giorni" value="1">A domani</button>
                   <button class="quiet" name="giorni" value="3">Tra 3 giorni</button>
                   <button class="quiet" name="giorni" value="7">Tra una settimana</button>

@@ -113,3 +113,40 @@ test('Per te: solo chi ha scritto negli ultimi 7 giorni; il resto in "Arretrate"
   assert.equal(I.regia(db, { brand: 'vir3d', now: NOW }).stats.arretrate, 0);
   assert.deepEqual(I.regia(db, { brand: 'vir3d', show: 'chiuse', now: NOW }).flow.map((f) => f.thread.thread_key), ['VECCHIA']);
 });
+
+test('Per te: una scheda per persona, le azioni valgono per tutte le sue conversazioni', () => {
+  const db = freshDb();
+  const f = C.createCustomer(db, { name: 'Fabrizio', brand: 'vir3d', email: 'f@example.it' });
+  msg(db, { thread: 'F1', h: 30, customer: f, who: 'f@example.it' });
+  msg(db, { thread: 'F2', h: 5, customer: f, who: 'f@example.it' });
+  msg(db, { thread: 'ALTRO', h: 2, who: 'x@example.it' });
+  M.assignBrands(db);
+  const r = I.regia(db, { brand: 'vir3d', now: NOW });
+  assert.equal(r.perTe.length, 2);
+  const fab = r.perTe.find((t) => t.customer_id === f);
+  assert.deepEqual(fab.keys.sort(), ['F1', 'F2']);
+  assert.equal(fab.others.length, 1);
+  assert.equal(I.perTeCount(db, 'vir3d', NOW).n, 2, 'il contatore conta le persone');
+});
+
+test('anteprima email: taglia la parte citata della risposta, in italiano, inglese e tedesco', () => {
+  const g = require('../lib/gmail');
+  assert.equal(M.cutQuoted('Grazie! Se fosse possibile con la scritta "THE BOSS" grazie! Fabrizio Marzadri Vir3d <info.vir3d@gmail.com> schrieb am Mi. 21. Okt. 2026 um 17:31:'),
+    'Grazie! Se fosse possibile con la scritta "THE BOSS" grazie! Fabrizio Marzadri');
+  assert.equal(M.cutQuoted('Ok, grazie. Che vettore usate? Carlo Il Mar 4 Ago 2026, 19:07 Vir3d <info.vir3d@gmail.com> ha scritto: testo vecchio'),
+    'Ok, grazie. Che vettore usate? Carlo');
+  assert.equal(M.cutQuoted('Perfect, thanks! On Tue, Aug 4, 2026 at 7:07 PM Vir3d <info.vir3d@gmail.com> wrote: old'), 'Perfect, thanks!');
+  assert.equal(M.cutQuoted('Va bene ----- Messaggio originale ----- Da: noi'), 'Va bene');
+  assert.equal(M.cutQuoted('Nessuna citazione qui'), 'Nessuna citazione qui');
+  assert.equal(g.cleanSnippet('Sì, grazie\nIl giorno mar 4 ago 2026 alle 19:07 Vir3d <\ninfo.vir3d@gmail.com> ha scritto:\n> vecchio', false), 'Sì, grazie');
+});
+
+test('inviti di calendario riconosciuti e scartati', () => {
+  const g = require('../lib/gmail');
+  assert.equal(M.isCalendarInvite({ subject: 'Invito: Vir3d - Allineamento @ mar 4 ago 2026', snippet: '' }), true);
+  assert.equal(M.isCalendarInvite({ subject: 'Accepted: call', snippet: '' }), true);
+  assert.equal(M.isCalendarInvite({ subject: 'Riunione', snippet: 'Partecipa con Google Meet https://meet.google.com/x' }), true);
+  assert.equal(M.isCalendarInvite({ subject: 'Preventivo', snippet: 'Vorrei un invito per la laurea' }), false);
+  assert.equal(g.hasCalendarPart({ childNodes: [{ type: 'text/plain' }, { type: 'text/calendar' }] }), true);
+  assert.equal(g.hasCalendarPart({ childNodes: [{ type: 'text/plain' }] }), false);
+});

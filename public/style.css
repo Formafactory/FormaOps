@@ -104,6 +104,7 @@ textarea { line-height: 1.5; }
 .pcard .name:hover { text-decoration: underline; }
 .pcard .meta { font-size: 13px; color: var(--muted); }
 .pcard .snip { margin: 8px 0 0; color: var(--text2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.pcard .also { margin-top: 6px; font-size: 13px; color: var(--muted); }
 .pcard .right { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
 .pcard .wait { font-size: 13px; color: var(--muted); }
 .pcard .wait.hot { color: var(--red); font-weight: 600; }
