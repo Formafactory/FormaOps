@@ -1,0 +1,117 @@
+<%- include('_top', { title: 'Regia', section: 'regia', autoRefresh: 180 }) %>
+<% var space = SPACES[brand].label; %>
+
+<header class="page-head">
+  <div>
+    <h1><%= today %></h1>
+    <p>Oggi su <%= space %> <%= stats.today === 1 ? 'è arrivata una conversazione' : stats.today === 0 ? 'non sono arrivate conversazioni' : 'sono arrivate ' + stats.today + ' conversazioni' %>.
+      <% if (stats.perTe) { %><%= stats.perTe === 1 ? 'Una aspetta' : stats.perTe + ' aspettano' %> una tua risposta<%= stats.urgent ? ', ' + stats.urgent + (stats.urgent === 1 ? ' è urgente' : ' sono urgenti') : '' %>.<% } else { %>Nessuno aspetta una tua risposta.<% } %></p>
+  </div>
+  <div class="right">
+    <span><%= lastSync ? 'Aggiornato alle ' + clock(lastSync) : 'Mai aggiornato' %></span>
+    <form method="post" action="/sync" class="inline-form" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Aggiorno…'">
+      <button type="submit" class="secondary">Aggiorna</button>
+    </form>
+  </div>
+</header>
+
+<% if (flash) { %><p class="<%= flash.includes('Errore') ? 'error' : 'ok' %>"><%= flash %></p><% } %>
+<% if (ok) { %><p class="ok"><%= ok %></p><% } %>
+<% errors.forEach(function (e) { %><p class="error small"><%= e %></p><% }) %>
+
+<section>
+  <div class="sec-head">
+    <div class="t">
+      <h2>Per te</h2>
+      <% if (perTe.length) { %><span class="count"><%= perTe.length %></span><% } %>
+      <span class="sub">chi aspetta una tua risposta, il più importante in alto</span>
+    </div>
+  </div>
+
+  <% if (!perTe.length) { %>
+    <p class="empty">Nessuno aspetta una tua risposta su <%= space %>.</p>
+  <% } else { %>
+  <div class="cards">
+    <% perTe.forEach(function (t) {
+         var link = '/conversazione?k=' + encodeURIComponent(t.thread_key);
+         var name = t.customer_id ? t.customer_name : (t.counterpart_name || displayAddress(t.contact_type, t.counterpart_address)); %>
+      <article class="pcard">
+        <div style="min-width: 0">
+          <a class="name" href="<%= link %>"><%= name %></a>
+          <span class="meta">&ensp;<%= SOURCE_LABEL[t.source] || t.source %><% if (t.customer_id && t.relationship !== 'b2b') { %>, <%= RELATIONSHIP_LABEL[t.relationship].toLowerCase() %><% } %></span>
+          <div><span class="reason reason-<%= t.reason.kind %>"><%= t.reason.label %></span></div>
+          <p class="snip"><%= t.snippet || t.subject %></p>
+        </div>
+        <div class="right">
+          <span class="wait <%= t.urgent ? 'hot' : '' %>" title="Dal <%= when(t.waiting_since) %>">aspetta <%= waitedLong(t.waited_hours) %></span>
+          <div class="acts">
+            <details class="more">
+              <summary>Altro</summary>
+              <div class="menu">
+                <form method="post" action="/conversazioni/stato">
+                  <input type="hidden" name="k" value="<%= t.thread_key %>"><input type="hidden" name="da" value="<%= here %>">
+                  <button class="quiet" name="azione" value="attesa">Ho già risposto altrove</button>
+                  <button class="quiet" name="azione" value="chiudi">Chiudi senza rispondere</button>
+                </form>
+                <hr>
+                <div class="lbl">Rimanda</div>
+                <form method="post" action="/conversazioni/stato">
+                  <input type="hidden" name="k" value="<%= t.thread_key %>"><input type="hidden" name="da" value="<%= here %>"><input type="hidden" name="azione" value="rimanda">
+                  <button class="quiet" name="giorni" value="1">A domani</button>
+                  <button class="quiet" name="giorni" value="3">Tra 3 giorni</button>
+                  <button class="quiet" name="giorni" value="7">Tra una settimana</button>
+                </form>
+              </div>
+            </details>
+            <% if (t.link) { %>
+              <a class="btn" href="<%= t.link %>" target="_blank" rel="noopener">Rispondi</a>
+            <% } else { %>
+              <a class="btn" href="<%= link %>">Apri</a>
+            <% } %>
+          </div>
+        </div>
+      </article>
+    <% }) %>
+  </div>
+  <% } %>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="t">
+      <h2>Il flusso</h2>
+      <span class="sub"><%= show === 'rimandate' ? 'conversazioni rimandate, in ordine di ritorno' : show === 'chiuse' ? 'conversazioni chiuse' : 'tutto il resto che si è mosso nelle ultime 48 ore' %></span>
+    </div>
+    <div class="links">
+      <a href="/" class="<%= show === 'recenti' ? 'on' : '' %>">Ultime 48 ore</a>
+      <a href="/?mostra=rimandate" class="<%= show === 'rimandate' ? 'on' : '' %>">Rimandate (<%= stats.rimandate %>)</a>
+      <a href="/?mostra=chiuse" class="<%= show === 'chiuse' ? 'on' : '' %>">Chiuse (<%= stats.chiuse %>)</a>
+    </div>
+  </div>
+
+  <% if (!flow.length) { %>
+    <p class="empty"><%= show === 'recenti' ? 'Niente di nuovo nelle ultime 48 ore.' : 'Nessuna conversazione qui.' %></p>
+  <% } else { %>
+  <div class="flow"><div class="flow-in">
+    <div class="frow head"><span>Quando</span><span>Contatto</span><span>Cosa</span><span>Stato</span></div>
+    <% flow.forEach(function (f) {
+         if (f.type === 'ordine') { var o = f.order; %>
+      <a class="frow" href="<%= o.customer_id ? '/customers/' + o.customer_id : '/clienti?q=' + encodeURIComponent(o.order_number) %>">
+        <span class="when"><%= clock(o.created_at) %></span>
+        <span class="who"><strong><%= o.name || '—' %></strong><span>Ordine vir3d.it</span></span>
+        <span class="what"><%= o.order_number %>, <%= money(o.total_minor, o.currency) %>, <%= (STATUS_LABEL[o.status] || o.status).toLowerCase() %></span>
+        <span class="chip chip-ordine">Nuovo ordine</span>
+      </a>
+    <% } else { var t = f.thread;
+         var nm = t.customer_id ? t.customer_name : (t.counterpart_name || displayAddress(t.contact_type, t.counterpart_address)); %>
+      <a class="frow" href="/conversazione?k=<%= encodeURIComponent(t.thread_key) %>&da=<%= encodeURIComponent(here) %>">
+        <span class="when"><%= show === 'rimandate' ? 'torna ' + day(t.snooze_until) : clock(t.last_at) %></span>
+        <span class="who"><strong><%= nm %></strong><span><%= SOURCE_LABEL[t.source] || t.source %></span></span>
+        <span class="what"><%= t.direction === 'out' ? 'Tu: ' : '' %><%= t.snippet || t.subject %></span>
+        <span class="chip chip-<%= f.state %>"><%= FLOW_LABEL[f.state] || THREAD_STATUS_LABEL[f.state] %></span>
+      </a>
+    <% } }) %>
+  </div></div>
+  <% } %>
+</section>
+<%- include('_bottom') %>

@@ -1,5 +1,5 @@
-<%- include('_top', { title: 'Nuovo cliente' }) %>
-<h1>Nuovo cliente</h1>
+<%- include('_top', { title: 'Nuovo cliente', section: 'clienti' }) %>
+<header class="page-head"><div><h1>Nuovo cliente</h1></div></header>
 <% if (error) { %><p class="error"><%= error %></p><% } %>
 <form class="card form" method="post" action="/customers">
   <label>Nome <input name="name" value="<%= form.name || '' %>" required autofocus></label>

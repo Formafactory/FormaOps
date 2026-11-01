@@ -1,6 +1,7 @@
 # FormaOps — regole del progetto
 
-App personale di Gianluca per vedere i clienti di Vir3D e De Artis Digitale in un posto solo.
+App personale di Gianluca: l'AI gestirà il flusso delle conversazioni di Vir3D e De Artis Digitale (due spazi separati),
+lui lo tiene d'occhio e risponde solo a quelle indirizzate a lui.
 Valgono per ogni sessione di lavoro su questo repository.
 
 ## Vincoli
@@ -28,6 +29,7 @@ Valgono per ogni sessione di lavoro su questo repository.
 1. Anagrafica clienti — 2. Ordini Vir3D (sola lettura) — 3. Gmail IMAP + schermata Arrivi —
 4. Meta: DM e commenti Facebook/Instagram, organici e inserzioni — 5. Sync automatica, backup, accesso remoto.
 6. Relationship Intelligence (relazione automatica + manuale) e Inbox con stati, urgenza e priorità.
+7. Spazi separati Vir3D / De Artis e interfaccia "Regia" (Per te + Il flusso), dalla bozza A scelta da Gianluca.
 
 Visione complessiva (fasi successive, da autorizzare una alla volta): canali → Inbox unica → Customer 360 →
 Relationship Intelligence → motore delle decisioni → AI controllata (Read → Suggest → Prepare → Approve → Execute) → marketing.

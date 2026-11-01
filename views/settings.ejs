@@ -1,7 +1,8 @@
 <%- include('_top', { title: 'Impostazioni', section: 'impostazioni' }) %>
-<h1>Impostazioni</h1>
+<header class="page-head"><div><h1>Impostazioni</h1><p>I canali di ciascun brand e le regole comuni. FormaOps legge soltanto: non invia, non pubblica, non modifica nulla.</p></div></header>
 <% if (msg) { %><p class="<%= ok ? 'ok' : 'error' %>"><%= msg %></p><% } %>
 
+<h2>Vir3D</h2>
 <div class="grid">
 <section class="card">
   <h2>Ordini Vir3D</h2>
@@ -18,11 +19,12 @@
 </section>
 
 <section class="card">
-  <h2>Email (Gmail)</h2>
+  <h2>Email di Vir3D</h2>
   <p class="small">FormaOps legge la posta in <strong>sola lettura</strong>: non invia, non cancella, non sposta
     e non segna come lette le email. Usa una <em>password per le app</em> di Google, non la password del tuo account.
     <% if (gmailHasPass) { %><br>Password per le app salvata.<% } %></p>
   <form class="form" method="post" action="/impostazioni/gmail">
+    <input type="hidden" name="brand" value="vir3d">
     <label>Indirizzo Gmail <input name="user" type="email" value="<%= gmailUser %>" placeholder="info.vir3d@gmail.com" required></label>
     <label>Password per le app (16 lettere)
       <input name="pass" type="password" autocomplete="off" placeholder="<%= gmailHasPass ? 'lascia vuoto per usare quella salvata' : 'xxxx xxxx xxxx xxxx' %>">
@@ -33,7 +35,32 @@
 </section>
 </div>
 
-<section class="card" style="margin-top:16px">
+<h2>De Artis</h2>
+<div class="grid">
+<section class="card">
+  <h2>Email di De Artis</h2>
+  <p class="small">La casella Gmail di De Artis, separata da quella di Vir3D. Stesse regole: sola lettura e <em>password per le app</em> di Google
+    (si crea dall'account Google di De Artis, non da quello di Vir3D).
+    <% if (gdHasPass) { %><br>Password per le app salvata.<% } %></p>
+  <form class="form" method="post" action="/impostazioni/gmail">
+    <input type="hidden" name="brand" value="deartis">
+    <label>Indirizzo Gmail di De Artis <input name="user" type="email" value="<%= gdUser %>" required></label>
+    <label>Password per le app (16 lettere)
+      <input name="pass" type="password" autocomplete="off" placeholder="<%= gdHasPass ? 'lascia vuoto per usare quella salvata' : 'xxxx xxxx xxxx xxxx' %>">
+    </label>
+    <label>Al primo collegamento importa gli ultimi <input name="days" type="number" min="7" max="730" value="<%= gdDays %>" style="width:90px"> giorni</label>
+    <div class="actions"><button type="submit">Salva e prova</button></div>
+  </form>
+</section>
+<section class="card">
+  <h2>Facebook e Instagram di De Artis</h2>
+  <p class="small" style="margin-top: 0">Usano la stessa chiave Meta di Vir3D, qui sotto. Le Pagine e gli account Instagram con "artis" nel nome finiscono nello spazio De Artis,
+    tutto il resto in Vir3D. Per collegarli basta assegnare la Pagina De Artis all'utente di sistema su Meta Business.</p>
+</section>
+</div>
+
+<h2>Comuni ai due brand</h2>
+<section class="card">
   <h2>Facebook e Instagram</h2>
   <p class="small">FormaOps <strong>legge soltanto</strong> messaggi di Messenger, DM di Instagram e commenti ai post e alle inserzioni.
     Non risponde e non pubblica nulla. Serve la chiave dell'<em>utente di sistema</em> creato nel tuo portfolio Meta Business:
@@ -53,7 +80,7 @@
   </form>
 </section>
 
-<section class="card" style="margin-top:16px">
+<section class="card">
   <h2>DM Instagram</h2>
   <p class="small">I messaggi diretti di Instagram si leggono con una chiave dell'account Instagram (guida in <code>docs/collegare-instagram-dm.md</code>).
     Solo lettura. La chiave dura 60 giorni e FormaOps la rinnova da solo ogni settimana, purché resti acceso almeno una volta a settimana.</p>
@@ -67,9 +94,9 @@
   </form>
 </section>
 
-<section class="card" style="margin-top:16px">
+<section class="card">
   <h2>Urgenza</h2>
-  <p class="small">Dopo quante ore senza risposta una conversazione diventa urgente e sale in cima agli Arrivi. Chi ha un ordine in corso sta comunque sempre in alto.</p>
+  <p class="small">Dopo quante ore senza risposta una conversazione diventa urgente e sale in cima a "Per te". Chi ha un ordine in corso sta comunque sempre in alto.</p>
   <form class="form" method="post" action="/impostazioni/urgenza">
     <label>Messaggi e commenti di Facebook e Instagram <span><input name="chat" type="number" min="1" max="720" value="<%= urgency.chat %>" style="width:90px"> ore</span></label>
     <label>Email <span><input name="email" type="number" min="1" max="720" value="<%= urgency.email %>" style="width:90px"> ore</span></label>
@@ -77,7 +104,7 @@
   </form>
 </section>
 
-<section class="card" style="margin-top:16px">
+<section class="card">
   <h2>Aggiornamento automatico e backup</h2>
   <form class="form" method="post" action="/impostazioni/automatico">
     <label>Aggiorna ordini, email e messaggi ogni <input name="minutes" type="number" min="0" max="240" value="<%= autoMinutes %>" style="width:90px"> minuti
@@ -95,9 +122,9 @@
   <form method="post" action="/impostazioni/backup" class="inline-form"><button type="submit" class="secondary">Fai un backup adesso</button></form>
 </section>
 
-<section class="card" style="margin-top:16px">
+<section class="card">
   <h2>Mittenti ignorati</h2>
-  <p class="small muted">Newsletter, notifiche e fornitori che non vuoi vedere negli Arrivi. Si aggiungono da "Da collegare".
+  <p class="small muted">Newsletter, notifiche e fornitori che non vuoi vedere nella Regia. Si aggiungono da "Da collegare".
     Gli indirizzi automatici (noreply, notifiche…) sono già esclusi.</p>
   <% if (!ignored.length) { %><p class="muted small">Nessuno.</p><% } %>
   <ul class="contact-list">

@@ -63,38 +63,107 @@ app.locals.waited = (hours) => {
   if (hours < 48) return `${Math.floor(hours)} h`;
   return `${Math.floor(hours / 24)} g`;
 };
+app.locals.SPACES = { vir3d: { label: 'Vir3D', color: '#b8892e' }, deartis: { label: 'De Artis', color: '#2d6f6a' } };
+app.locals.FLOW_LABEL = I.FLOW_LABEL;
+// "da 35 minuti", "da 5 ore", "da 3 giorni"
+app.locals.waitedLong = (hours) => {
+  if (hours < 1) { const m = Math.max(1, Math.round(hours * 60)); return `da ${m} ${m === 1 ? 'minuto' : 'minuti'}`; }
+  if (hours < 48) { const h = Math.floor(hours); return `da ${h} ${h === 1 ? 'ora' : 'ore'}`; }
+  return `da ${Math.floor(hours / 24)} giorni`;
+};
+// Ora se è oggi, altrimenti giorno e ora.
+app.locals.clock = (iso) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const opt = { timeZone: 'Europe/Rome' };
+  const same = d.toLocaleDateString('it-IT', opt) === new Date().toLocaleDateString('it-IT', opt);
+  return same ? d.toLocaleTimeString('it-IT', { ...opt, hour: '2-digit', minute: '2-digit' })
+    : d.toLocaleString('it-IT', { ...opt, day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+};
 app.locals.day = (iso) => (iso ? app.locals.when(iso).split(',')[0] : '—');
 
 function syncInfo() {
-  const gstate = db.prepare(`SELECT * FROM sync_state WHERE source = 'gmail'`).get() || {};
-  const mstate = db.prepare(`SELECT * FROM sync_state WHERE source = 'meta'`).get() || {};
+  const state = (k) => db.prepare('SELECT * FROM sync_state WHERE source = ?').get(k) || {};
   return {
     state: getState(db),
-    gstate,
+    gstate: state('gmail'),
+    gdstate: state('gmail_deartis'),
+    mstate: state('meta'),
     configured: Boolean(vir3dConfig(db).key),
     gmailConfigured: Boolean(gmailConfig(db).user && gmailConfig(db).pass),
-    mstate,
+    gmailDeartisConfigured: Boolean(gmailConfig(db, process.env, 'deartis').user && gmailConfig(db, process.env, 'deartis').pass),
     metaConfigured: Boolean(metaConfig(db).token),
     reviewOpen: db.prepare('SELECT COUNT(*) FROM review_items WHERE resolved_at IS NULL').pluck().get(),
-    inbox: I.inbox(db).counts,
-    unlinked: db.prepare(`SELECT COUNT(*) FROM (SELECT 1 FROM messages WHERE customer_id IS NULL AND direction = 'in'
-                          GROUP BY contact_type, counterpart_address)`).pluck().get(),
   };
 }
-app.use((req, res, next) => { res.locals.nav = syncInfo(); next(); });
 
-// ARRIVI: inbox di tutti i canali, ordinata per priorità, + ordini recenti.
+// Canali di uno spazio, per l'elenco in fondo al menu.
+function channelsFor(brand, si) {
+  const st = (configured, s) => ({ state: !configured ? 'off' : s && s.last_error ? 'bad' : '', error: s && s.last_error });
+  const pages = JSON.parse(getSetting(db, 'meta_pages') || '[]')
+    .filter((p) => (/artis/i.test(p.name) ? 'deartis' : 'vir3d') === brand);
+  const out = [];
+  if (brand === 'vir3d') out.push({ label: si.configured ? 'Ordini vir3d.it' : 'Ordini vir3d.it, da collegare', ...st(si.configured, si.state) });
+  const g = gmailConfig(db, process.env, brand);
+  const gOk = brand === 'deartis' ? si.gmailDeartisConfigured : si.gmailConfigured;
+  out.push({ label: gOk ? g.user : 'Email, da collegare', ...st(gOk, brand === 'deartis' ? si.gdstate : si.gstate) });
+  if (pages.length) {
+    for (const p of pages) {
+      out.push({ label: `Facebook ${p.name}`, ...st(si.metaConfigured, si.mstate) });
+      if (p.instagram) out.push({ label: `Instagram @${p.instagram}`, ...st(si.metaConfigured, si.mstate) });
+    }
+  } else {
+    out.push({ label: 'Facebook e Instagram, da collegare', state: 'off' });
+  }
+  if (brand === 'vir3d') {
+    const ig = Boolean(metaConfig(db).igToken);
+    out.push({ label: ig ? 'DM Instagram' : 'DM Instagram, da collegare', state: ig ? '' : 'off' });
+  }
+  return out;
+}
+
+// Spazio attivo (Vir3D o De Artis), ricordato in un cookie.
+function readBrand(req) {
+  const m = /(?:^|;\s*)formaops_brand=(vir3d|deartis)/.exec(req.headers.cookie || '');
+  return m ? m[1] : 'vir3d';
+}
+app.use((req, res, next) => {
+  const brand = readBrand(req);
+  const si = syncInfo();
+  res.locals.brand = brand;
+  res.locals.nav = {
+    perTe: { vir3d: I.perTeCount(db, 'vir3d'), deartis: I.perTeCount(db, 'deartis') },
+    unlinked: db.prepare(`SELECT COUNT(*) FROM (SELECT 1 FROM messages WHERE customer_id IS NULL AND direction = 'in' AND brand = ?
+                          GROUP BY contact_type, counterpart_address)`).pluck().get(brand),
+    reviewOpen: si.reviewOpen,
+    channels: channelsFor(brand, si),
+  };
+  next();
+});
+
+app.get('/spazio/:brand', (req, res) => {
+  const b = req.params.brand === 'deartis' ? 'deartis' : 'vir3d';
+  res.setHeader('Set-Cookie', `formaops_brand=${b}; Path=/; Max-Age=31536000; SameSite=Lax`);
+  res.redirect('/');
+});
+
+// REGIA: "Per te" (chi aspetta una tua risposta, con il motivo) e "Il flusso" (tutto il resto che si muove).
 app.get('/', (req, res) => {
-  const view = I.VIEWS.includes(req.query.vista) ? req.query.vista : 'rispondere';
-  const source = Object.keys(M.SOURCE_LABEL).includes(req.query.canale) ? req.query.canale : '';
-  const rel = [...I.RELATIONSHIPS, 'sconosciuto'].includes(req.query.relazione) ? req.query.relazione : '';
-  const { threads, counts, hours } = I.inbox(db, { view, source: source || undefined, relationship: rel || undefined });
-  const recentOrders = db.prepare(`
-    SELECT o.*, c.name AS customer_name FROM orders o LEFT JOIN customers c ON c.id = o.customer_id
-    WHERE o.created_at >= ? ORDER BY o.created_at DESC LIMIT 20`).all(new Date(Date.now() - 7 * 86400000).toISOString());
-  const qs = new URLSearchParams({ vista: view, ...(source && { canale: source }), ...(rel && { relazione: rel }) }).toString();
-  res.render('arrivals', {
-    view, source, rel, threads, counts, hours, recentOrders, qs, sync: syncInfo(), flash: req.query.sync ?? null, ok: req.query.ok ?? null,
+  const brand = res.locals.brand;
+  const show = ['rimandate', 'chiuse'].includes(req.query.mostra) ? req.query.mostra : 'recenti';
+  const r = I.regia(db, { brand, show });
+  const si = syncInfo();
+  const errors = [];
+  if (brand === 'vir3d' && si.state.last_error) errors.push(`Ordini: ${si.state.last_error}`);
+  const gs = brand === 'deartis' ? si.gdstate : si.gstate;
+  if (gs.last_error) errors.push(`Email: ${gs.last_error}`);
+  if (si.mstate.last_error) errors.push(`Facebook e Instagram: ${si.mstate.last_error}`);
+  const last = [brand === 'vir3d' ? si.state.last_ok_at : null, gs.last_ok_at, si.mstate.last_ok_at].filter(Boolean).sort().pop();
+  const today = new Date().toLocaleDateString('it-IT', { timeZone: 'Europe/Rome', weekday: 'long', day: 'numeric', month: 'long' });
+  res.render('regia', {
+    ...r, show, errors, lastSync: last, today: today.charAt(0).toUpperCase() + today.slice(1),
+    here: '/' + (show !== 'recenti' ? `?mostra=${show}` : ''),
+    flash: req.query.sync ?? null, ok: req.query.ok ?? null,
   });
 });
 
@@ -129,13 +198,14 @@ app.post('/conversazioni/stato', (req, res) => {
 
 app.get('/clienti', (req, res) => {
   const q = String(req.query.q ?? '');
-  const brand = String(req.query.brand ?? '');
+  const brand = res.locals.brand;
   const rel = I.RELATIONSHIPS.includes(req.query.relazione) ? req.query.relazione : '';
-  let customers = C.searchCustomers(db, q, { brand });
+  // Clienti dello spazio attivo (quelli segnati "entrambi" compaiono in tutti e due).
+  let customers = C.searchCustomers(db, q).filter((c) => c.brand === brand || c.brand === 'entrambi');
   for (const c of customers) c.relationship = I.relationship(db, c.id).value;
   if (rel) customers = customers.filter((c) => c.relationship === rel);
-  const total = db.prepare('SELECT COUNT(*) FROM customers').pluck().get();
-  res.render('index', { q, brand, rel, customers, total, sync: syncInfo(), flash: null });
+  const total = db.prepare(`SELECT COUNT(*) FROM customers WHERE brand IN (?, 'entrambi')`).pluck().get(brand);
+  res.render('index', { q, rel, customers, total });
 });
 
 // Aggiorna tutti i canali collegati, uno dopo l'altro.
@@ -146,10 +216,12 @@ async function syncAll() {
     parts.push(r.skipped ? 'Ordini: già in corso' : r.ok ? `Ordini: ${r.nuovi} nuovi, ${r.aggiornati} aggiornati` : `Errore ordini: ${r.error}`);
   }
   M.linkUnmatched(db);
-  const g = gmailConfig(db);
-  if (g.user && g.pass) {
+  for (const b of ['vir3d', 'deartis']) {
+    const g = gmailConfig(db, process.env, b);
+    if (!g.user || !g.pass) continue;
+    const label = b === 'deartis' ? 'Email De Artis' : 'Email Vir3D';
     const r = await syncGmail(db, { cfg: g, log: console.log });
-    parts.push(r.skipped ? 'Email: già in corso' : r.ok ? `Email: ${r.nuovi} nuove` : `Errore email: ${r.error}`);
+    parts.push(r.skipped ? `${label}: già in corso` : r.ok ? `${label}: ${r.nuovi} nuove` : `Errore ${label.toLowerCase()}: ${r.error}`);
   }
   const mc = metaConfig(db);
   if (mc.token) {
@@ -216,7 +288,7 @@ app.get('/da-collegare', (req, res) => {
   const customers = db.prepare(`
     SELECT c.id, c.name, (SELECT GROUP_CONCAT(value_normalized, ', ') FROM contacts k WHERE k.customer_id = c.id AND k.type = 'email') AS emails
     FROM customers c ORDER BY c.name COLLATE NOCASE`).all();
-  res.render('unlinked', { senders: M.unlinkedSenders(db), customers, error: req.query.err ?? null, BRANDS: C.BRANDS });
+  res.render('unlinked', { senders: M.unlinkedSenders(db, { brand: res.locals.brand }), customers, error: req.query.err ?? null, BRANDS: C.BRANDS });
 });
 
 const SENDER_TYPES = ['email', 'instagram', 'facebook'];
@@ -267,10 +339,12 @@ app.post('/da-collegare/ignora', (req, res) => {
 app.get('/impostazioni', (req, res) => {
   const cfg = vir3dConfig(db);
   const g = gmailConfig(db);
+  const gd = gmailConfig(db, process.env, 'deartis');
   const ignored = db.prepare('SELECT pattern FROM ignored_senders ORDER BY pattern').pluck().all();
   res.render('settings', {
     hasKey: Boolean(cfg.key), keyTail: cfg.key ? cfg.key.slice(-4) : '',
     gmailUser: g.user, gmailHasPass: Boolean(g.pass), gmailDays: g.days, ignored,
+    gdUser: gd.user, gdHasPass: Boolean(gd.pass), gdDays: gd.days,
     metaHasToken: Boolean(metaConfig(db).token),
     metaDays: metaConfig(db).days,
     igDm: metaConfig(db).igDm,
@@ -295,23 +369,28 @@ app.post('/impostazioni/vir3d', async (req, res) => {
   if (key) setSetting(db, 'vir3d_api_key', key);
   try {
     await vir3d.health(vir3dConfig(db));
-    res.redirect('/impostazioni?ok=1&msg=' + encodeURIComponent('Collegamento a vir3d.it riuscito. Ora vai su Arrivi e premi "Aggiorna".'));
+    res.redirect('/impostazioni?ok=1&msg=' + encodeURIComponent('Collegamento a vir3d.it riuscito. Ora vai sulla Regia e premi "Aggiorna".'));
   } catch (err) {
     res.redirect('/impostazioni?msg=' + encodeURIComponent(err.message));
   }
 });
 
 app.post('/impostazioni/gmail', async (req, res) => {
+  const brand = req.body.brand === 'deartis' ? 'deartis' : 'vir3d';
+  const k = brand === 'deartis' ? 'gmail_deartis' : 'gmail';
   const user = normalizeEmail(req.body.user);
   const pass = String(req.body.pass ?? '').replace(/\s+/g, '');
   const days = Math.min(Math.max(Number(req.body.days) || 90, 7), 730);
-  if (user) setSetting(db, 'gmail_user', user);
-  if (pass) setSetting(db, 'gmail_app_password', pass);
-  setSetting(db, 'gmail_days', String(days));
+  if (brand === 'deartis' && user && user === normalizeEmail(getSetting(db, 'gmail_user') || '')) {
+    return res.redirect('/impostazioni?msg=' + encodeURIComponent('Questa è già la casella di Vir3D: per De Artis serve un indirizzo diverso.'));
+  }
+  if (user) setSetting(db, `${k}_user`, user);
+  if (pass) setSetting(db, `${k}_app_password`, pass);
+  setSetting(db, `${k}_days`, String(days));
   try {
-    const info = await testConnection(gmailConfig(db));
+    const info = await testConnection(gmailConfig(db, process.env, brand));
     res.redirect('/impostazioni?ok=1&msg=' + encodeURIComponent(
-      `Gmail collegato in sola lettura (${info.exists} messaggi in "${info.path}"). Ora vai su Arrivi e premi "Aggiorna": la prima volta può richiedere qualche minuto.`));
+      `Gmail collegato in sola lettura (${info.exists} messaggi in "${info.path}"). Ora vai sulla Regia e premi "Aggiorna": la prima volta può richiedere qualche minuto.`));
   } catch (err) {
     res.redirect('/impostazioni?msg=' + encodeURIComponent(err.message));
   }
@@ -326,7 +405,7 @@ app.post('/impostazioni/meta', async (req, res) => {
     setSetting(db, 'meta_pages', JSON.stringify(pages));
     const names = pages.map((p) => p.name + (p.instagram ? ` (Instagram @${p.instagram})` : ' (senza Instagram)')).join(', ');
     res.redirect('/impostazioni?ok=1&msg=' + encodeURIComponent(
-      `Facebook e Instagram collegati in lettura: ${names}. Ora vai su Arrivi e premi "Aggiorna".`));
+      `Facebook e Instagram collegati in lettura: ${names}. Ora vai sulla Regia e premi "Aggiorna".`));
   } catch (err) {
     res.redirect('/impostazioni?msg=' + encodeURIComponent(err.message));
   }
@@ -374,7 +453,7 @@ app.post('/verifica/:id/risolto', (req, res) => {
 });
 
 app.get('/customers/new', (req, res) => {
-  res.render('new', { error: null, form: { brand: 'vir3d' } });
+  res.render('new', { error: null, form: { brand: res.locals.brand } });
 });
 
 app.post('/customers', (req, res) => {

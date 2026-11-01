@@ -1,6 +1,6 @@
 <%- include('_top', { title: customer.name, section: 'clienti' }) %>
-<p><a href="/clienti">Tutti i clienti</a></p>
-<div class="thread-head">
+<a class="back" href="/clienti">Tutti i clienti</a>
+<header class="page-head">
   <div>
     <h1><%= customer.name %></h1>
     <div class="thread-meta">
@@ -16,7 +16,7 @@
     </select>
     <noscript><button class="secondary">Salva</button></noscript>
   </form>
-</div>
+</header>
 
 <div class="summary">
   <div><div class="k">Ordini</div><div class="v"><%= summary.orders %></div></div>
@@ -73,7 +73,7 @@
   </section>
 </div>
 
-<section class="card orders">
+<section class="card">
   <h2>Messaggi e commenti <span class="muted">(<%= threads.length %> conversazioni)</span></h2>
   <% if (threads.length === 0) { %><p class="muted">Nessun messaggio.</p><% } %>
   <% threads.forEach(function (t) { var link = '/conversazione?k=' + encodeURIComponent(t.thread_key) + '&da=' + encodeURIComponent('/customers/' + customer.id); %>
@@ -82,14 +82,14 @@
         <span class="st st-<%= t.status %>"><%= THREAD_STATUS_LABEL[t.status] %></span>
         <span class="chan chan-<%= t.source %>"><%= SOURCE_LABEL[t.source] || t.source %></span>
         <a class="subj" href="<%= link %>"><%= t.subject || '(senza oggetto)' %></a><% if (t.n > 1) { %> <span class="muted small">(<%= t.n %>)</span><% } %>
-        <span class="muted small nowrap" style="margin-left:auto"><%= when(t.last_at) %></span>
+        <span class="muted small nowrap" style="margin-left:auto"><%= clock(t.last_at) %></span>
       </div>
       <div class="muted small"><%= t.direction === 'out' ? 'Tu: ' : '' %><%= t.snippet %></div>
     </div>
   <% }) %>
 </section>
 
-<section class="card orders">
+<section class="card">
   <h2>Ordini Vir3D <span class="muted">(<%= orders.length %>)</span></h2>
   <% reviews.forEach(function (r) { %><p class="error small">Da verificare: <%= r.detail %> (ordine <%= r.ref_id %>)</p><% }) %>
   <% if (orders.length === 0) { %><p class="muted">Nessun ordine.</p><% } %>

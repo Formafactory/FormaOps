@@ -4,20 +4,49 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><%= title %> · FormaOps</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
-  <% if (typeof autoRefresh !== 'undefined' && autoRefresh) { %><meta http-equiv="refresh" content="<%= autoRefresh %>;url=<%= typeof autoRefreshUrl !== 'undefined' ? autoRefreshUrl : '' %>"><% } %>
+  <% if (typeof autoRefresh !== 'undefined' && autoRefresh) { %><meta http-equiv="refresh" content="<%= autoRefresh %>"><% } %>
 </head>
-<body>
-<% var hasNav = typeof nav !== 'undefined'; var sec = typeof section !== 'undefined' ? section : ''; %>
-<header class="bar">
+<% var sec = typeof section !== 'undefined' ? section : ''; %>
+<body class="space-<%= brand %>">
+<div class="app">
+<aside class="side">
   <a class="logo" href="/">FormaOps</a>
-  <nav>
-    <a href="/" class="<%= sec === 'arrivi' ? 'here' : '' %>">Arrivi<% if (hasNav && nav.inbox.rispondere) { %><span class="count <%= nav.inbox.urgenti ? 'hot' : '' %>" title="<%= nav.inbox.rispondere %> da rispondere, <%= nav.inbox.urgenti %> urgenti"><%= nav.inbox.rispondere %></span><% } %></a>
-    <a href="/clienti" class="<%= sec === 'clienti' ? 'here' : '' %>">Clienti</a>
-    <a href="/da-collegare" class="<%= sec === 'collegare' ? 'here' : '' %>">Da collegare<% if (hasNav && nav.unlinked) { %><span class="count"><%= nav.unlinked %></span><% } %></a>
-    <a href="/verifica" class="<%= sec === 'verifica' ? 'here' : '' %>">Da verificare<% if (hasNav && nav.reviewOpen) { %><span class="count"><%= nav.reviewOpen %></span><% } %></a>
-    <a href="/impostazioni" class="<%= sec === 'impostazioni' ? 'here' : '' %>">Impostazioni</a>
-    <a class="btn" href="/customers/new">Nuovo cliente</a>
+
+  <nav class="spaces" aria-label="Brand">
+    <% Object.keys(SPACES).forEach(function (b) { var c = nav.perTe[b]; %>
+      <a href="/spazio/<%= b %>" class="<%= brand === b ? 'on' : '' %>" aria-current="<%= brand === b ? 'true' : 'false' %>">
+        <span class="dot" style="background: <%= SPACES[b].color %>"></span><%= SPACES[b].label %>
+        <% if (c.n) { %><span class="n <%= c.urgent ? 'hot' : '' %>" title="<%= c.n %> per te"><%= c.n %></span><% } %>
+      </a>
+    <% }) %>
   </nav>
-</header>
-<main>
+
+  <nav class="nav" aria-label="Sezioni">
+    <a href="/" class="<%= sec === 'regia' ? 'on' : '' %>">Regia<% if (nav.perTe[brand].n) { %><span class="badge <%= nav.perTe[brand].urgent ? 'hot' : '' %>"><%= nav.perTe[brand].n %></span><% } %></a>
+    <a href="/clienti" class="<%= sec === 'clienti' ? 'on' : '' %>">Clienti</a>
+    <a href="/da-collegare" class="<%= sec === 'collegare' ? 'on' : '' %>">Da collegare<% if (nav.unlinked) { %><span class="badge"><%= nav.unlinked %></span><% } %></a>
+    <% if (nav.reviewOpen) { %><a href="/verifica" class="<%= sec === 'verifica' ? 'on' : '' %>">Da verificare<span class="badge"><%= nav.reviewOpen %></span></a><% } %>
+    <a href="/impostazioni" class="<%= sec === 'impostazioni' ? 'on' : '' %>">Impostazioni</a>
+  </nav>
+
+  <div class="nav">
+    <div class="nav-title">In arrivo</div>
+    <span class="later">Regole</span>
+    <span class="later">Assistente AI</span>
+    <span class="later">Marketing</span>
+  </div>
+
+  <a class="new" href="/customers/new">Nuovo cliente</a>
+
+  <div class="channels">
+    <strong>Canali di <%= SPACES[brand].label %></strong>
+    <% nav.channels.forEach(function (ch) { %>
+      <div title="<%= ch.error || '' %>"><i class="<%= ch.state %>"></i><%= ch.label %></div>
+    <% }) %>
+  </div>
+</aside>
+<main class="content">
+<div class="page">

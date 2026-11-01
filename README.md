@@ -39,7 +39,7 @@ Rieseguire la sincronizzazione non crea doppioni e, se si interrompe, riparte da
 
 ## Collegare Gmail (sola lettura)
 
-In **Impostazioni** → Email: indirizzo Gmail e una *password per le app* di Google (non la password dell'account).
+Una casella per brand. In **Impostazioni** → Email di Vir3D (e Email di De Artis): indirizzo Gmail e una *password per le app* di Google (non la password dell'account).
 FormaOps apre la posta in sola lettura: non invia, non cancella, non sposta e non segna come lette le email.
 Al primo collegamento importa gli ultimi 90 giorni (modificabile), escluse Promozioni, Social, Aggiornamenti e Forum.
 
@@ -56,22 +56,29 @@ Si leggono con una chiave dell'account Instagram (API con login Instagram): guid
 
 ## Aggiornamento automatico, backup, avvio con Windows
 
-- Mentre FormaOps è acceso aggiorna da solo ordini, email e messaggi (di base ogni 15 minuti, modificabile in Impostazioni). La pagina Arrivi si ricarica da sola ogni 3 minuti.
+- Mentre FormaOps è acceso aggiorna da solo ordini, email e messaggi (di base ogni 15 minuti, modificabile in Impostazioni). La Regia si ricarica da sola ogni 3 minuti.
 - Un backup al giorno del database nella cartella scelta in Impostazioni (consigliata una cartella di Google Drive); si tengono gli ultimi 30. Per ripristinare: chiudi FormaOps e copia il backup al posto di `formaops-data\formaops.sqlite`.
 - Doppio clic su `avvio-automatico-con-windows.bat` (una volta sola): FormaOps parte da solo, ridotto a icona, quando accendi il PC.
 
 ## Le schermate
 
-- **Arrivi**: l'inbox di tutti i canali. Schede Da rispondere, In attesa, Rimandate, Chiuse, Tutte, Personale.
-  In "Da rispondere" in cima chi ha un ordine in corso, poi gli urgenti (DM e commenti dopo 4 ore, email dopo 24,
-  modificabili in Impostazioni), poi chi aspetta da più tempo. Per ogni conversazione: Chiudi, Rimanda (domani, 3 giorni,
-  una settimana) o Risposto altrove. Se il cliente riscrive, la conversazione torna da sola tra le da rispondere.
-- **Conversazione**: i messaggi in ordine, lo stato, la scheda del cliente in breve e il link per rispondere nel canale.
-- **Clienti**: anagrafica con relazione (Cliente, Lead, B2B, Fornitore, Personale), ordini, messaggi, totale speso, ordini in corso.
-  La relazione è automatica (De Artis = B2B, con ordini = Cliente, altrimenti Lead) e si corregge a mano dalla scheda.
-  I contatti Personale stanno fuori dalla lista di lavoro, nella loro scheda.
-- **Da collegare**: chi ti ha scritto ma non è ancora associato a un cliente. Lo colleghi una volta, poi viene riconosciuto da solo. Newsletter e fornitori si ignorano da qui.
-- **Da verificare**: casi ambigui degli ordini (es. email di un cliente e telefono di un altro).
+Vir3D e De Artis sono due spazi separati: si passa dall'uno all'altro in alto nel menu. Ogni spazio ha i suoi canali,
+i suoi clienti e la sua Regia. Le conversazioni prendono il brand dal canale da cui arrivano: casella Gmail di De Artis,
+oppure Pagina / account Instagram con "artis" nel nome = De Artis; tutto il resto = Vir3D. Gli ordini vir3d.it sono di Vir3D.
+
+- **Regia**: in alto **Per te**, cioè chi aspetta una tua risposta, ognuno con il motivo (contatto personale, possibile reclamo,
+  cliente B2B, ordine in corso, ha scritto più volte, nuovo contatto…). In cima chi ha un ordine in corso, poi gli urgenti
+  (DM e commenti dopo 4 ore, email dopo 24, modificabili in Impostazioni), poi chi aspetta da più tempo.
+  "Rispondi" apre il canale originale; "Altro" permette di segnare "Ho già risposto altrove", chiudere o rimandare.
+  Sotto **Il flusso**: tutto il resto che si è mosso nelle ultime 48 ore (risposte date, conversazioni chiuse, nuovi ordini),
+  più le viste Rimandate e Chiuse. Se un cliente riscrive, la conversazione torna da sola in "Per te".
+  Oggi, senza AI, in "Per te" c'è tutto quello che aspetta risposta; quando arriverà l'assistente AI resteranno lì solo
+  i casi che le regole lasciano a te.
+- **Conversazione**: i messaggi in ordine, la scheda del cliente in breve e il pulsante per rispondere nel canale.
+- **Clienti**: i clienti dello spazio attivo, con relazione (Cliente, Lead, B2B, Fornitore, Personale), ordini, messaggi,
+  totale speso e ordini in corso. La relazione è automatica (De Artis = B2B, con ordini = Cliente, altrimenti Lead) e si corregge a mano.
+- **Da collegare**: chi ha scritto allo spazio attivo ma non è ancora associato a un cliente.
+- **Da verificare**: casi ambigui degli ordini (compare nel menu solo quando c'è qualcosa).
 
 ## Aggiornare
 
@@ -88,9 +95,10 @@ npm test
 
 - Blocco 1 — anagrafica clienti: fatto.
 - Blocco 2 — ordini Vir3D in sola lettura: fatto.
-- Blocco 3 — Gmail in sola lettura e schermata Arrivi: fatto.
+- Blocco 3 — Gmail in sola lettura: fatto.
 - Blocco 4 — Facebook e Instagram (DM e commenti, anche inserzioni), filtri email: fatto.
 - Blocco 5 — aggiornamento automatico, backup giornaliero, avvio con Windows: fatto.
 - DM Instagram via API con login Instagram: fatto.
 - Blocco 6 — Relationship Intelligence e Inbox con stati e urgenza: fatto.
-- Da fare: DM Instagram (chiave), Pagina De Artis, accesso dal telefono.
+- Blocco 7 — spazi separati Vir3D / De Artis, Regia (Per te + Il flusso), nuova interfaccia: fatto.
+- Da fare: DM Instagram (chiave), Gmail e Pagina De Artis, accesso dal telefono.

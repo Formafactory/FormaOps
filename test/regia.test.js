@@ -1,0 +1,95 @@
+'use strict';
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const path = require('node:path');
+const Database = require('better-sqlite3');
+const { migrate } = require('../lib/db');
+const C = require('../lib/customers');
+const I = require('../lib/inbox');
+const M = require('../lib/messages');
+const { setSetting } = require('../lib/settings');
+
+const H = 3600000;
+const NOW = Date.parse('2026-11-02T12:00:00.000Z');
+const ago = (h) => new Date(NOW - h * H).toISOString();
+
+function freshDb() {
+  const db = new Database(':memory:');
+  db.pragma('foreign_keys = ON');
+  migrate(db, path.join(__dirname, '..', 'migrations'), () => {});
+  return db;
+}
+let seq = 0;
+function msg(db, { thread, source = 'gmail', dir = 'in', h = 1, who = 'anna@example.it', type = 'email', customer = null,
+  account = 'info.vir3d@gmail.com', subject = 'Oggetto', text = 'testo' }) {
+  seq++;
+  db.prepare(`INSERT INTO messages (id, source, kind, contact_type, account, thread_key, direction, counterpart_address, subject, snippet, sent_at, customer_id)
+              VALUES (?, ?, 'email', ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+    .run(`r${seq}`, source, type, account, thread, dir, who, subject, text, ago(h), customer);
+}
+
+test('brand dal canale: casella De Artis e Pagine con "artis" nel nome = De Artis, il resto Vir3D', () => {
+  const db = freshDb();
+  setSetting(db, 'gmail_deartis_user', 'Studio.DeArtis@gmail.com');
+  msg(db, { thread: 'A', account: 'info.vir3d@gmail.com' });
+  msg(db, { thread: 'B', account: 'studio.deartis@gmail.com' });
+  msg(db, { thread: 'C', source: 'messenger', type: 'facebook', who: 'fb:1', account: 'De Artis Digitale' });
+  msg(db, { thread: 'D', source: 'instagram', type: 'instagram', who: 'x', account: '@vir3ditalia' });
+  assert.equal(M.assignBrands(db), 4);
+  const b = Object.fromEntries(db.prepare('SELECT thread_key, brand FROM messages').all().map((r) => [r.thread_key, r.brand]));
+  assert.deepEqual(b, { A: 'vir3d', B: 'deartis', C: 'deartis', D: 'vir3d' });
+  assert.equal(M.assignBrands(db), 0, 'già assegnati: non li ritocca');
+});
+
+test('spazi separati: la Regia di un brand non mostra le conversazioni dell\'altro', () => {
+  const db = freshDb();
+  setSetting(db, 'gmail_deartis_user', 'studio.deartis@gmail.com');
+  msg(db, { thread: 'V', h: 2 });
+  msg(db, { thread: 'D', h: 2, who: 'museo@example.it', account: 'studio.deartis@gmail.com' });
+  M.assignBrands(db);
+  assert.deepEqual(I.regia(db, { brand: 'vir3d', now: NOW }).perTe.map((t) => t.thread_key), ['V']);
+  assert.deepEqual(I.regia(db, { brand: 'deartis', now: NOW }).perTe.map((t) => t.thread_key), ['D']);
+  assert.deepEqual(I.perTeCount(db, 'deartis', NOW), { n: 1, urgent: 0 });
+  assert.deepEqual(M.unlinkedSenders(db, { brand: 'deartis' }).map((s) => s.address), ['museo@example.it']);
+});
+
+test('Per te: il motivo è sempre indicato, con le regole in ordine', () => {
+  const db = freshDb();
+  const zia = C.createCustomer(db, { name: 'Zia', brand: 'vir3d' });
+  I.setRelationship(db, zia, 'personale');
+  const museo = C.createCustomer(db, { name: 'Museo', brand: 'deartis' });
+  const anna = C.createCustomer(db, { name: 'Anna', brand: 'vir3d' });
+  db.prepare(`INSERT INTO orders (id, order_number, customer_id, created_at, updated_at, status, currency, subtotal_minor, shipping_minor, discount_minor, total_minor)
+              VALUES ('o1', 'VIR3D-1', ?, ?, ?, 'in_production', 'EUR', 1, 0, 0, 1)`).run(anna, ago(30), ago(30));
+  msg(db, { thread: 'ZIA', h: 1, customer: zia, who: 'zia@example.it' });
+  msg(db, { thread: 'ROTTO', h: 1, who: 'm@example.it', subject: 'Pacco', text: 'L\'ambigramma è arrivato rotto' });
+  msg(db, { thread: 'MUSEO', h: 1, customer: museo, who: 'museo@example.it' });
+  msg(db, { thread: 'ANNA', h: 1, customer: anna, who: 'anna@example.it' });
+  msg(db, { thread: 'SOLL', h: 5, who: 's@example.it' });
+  msg(db, { thread: 'SOLL', h: 1, who: 's@example.it' });
+  msg(db, { thread: 'NUOVO', h: 1, who: 'n@example.it' });
+  M.assignBrands(db);
+  const r = Object.fromEntries(I.regia(db, { brand: 'vir3d', now: NOW }).perTe.map((t) => [t.thread_key, t.reason.kind]));
+  assert.deepEqual(r, { ZIA: 'personale', ROTTO: 'reclamo', MUSEO: 'b2b', ANNA: 'ordine', SOLL: 'sollecito', NUOVO: 'nuovo' });
+});
+
+test('Il flusso: risposte, rimandate e chiuse delle ultime 48 ore, più i nuovi ordini; non quelle da rispondere', () => {
+  const db = freshDb();
+  msg(db, { thread: 'RISPOSTA', h: 5 });
+  msg(db, { thread: 'RISPOSTA', dir: 'out', h: 3 });
+  msg(db, { thread: 'ALTROVE', h: 4, who: 'b@example.it' });
+  msg(db, { thread: 'APERTA', h: 1, who: 'c@example.it' });
+  msg(db, { thread: 'VECCHIA', h: 100, who: 'd@example.it' });
+  msg(db, { thread: 'VECCHIA', dir: 'out', h: 99, who: 'd@example.it' });
+  M.assignBrands(db);
+  I.setThreadState(db, 'ALTROVE', 'attesa', { now: NOW });
+  db.prepare(`INSERT INTO orders (id, order_number, created_at, updated_at, status, currency, subtotal_minor, shipping_minor, discount_minor, total_minor, customer_name)
+              VALUES ('o9', 'VIR3D-9', ?, ?, 'confirmed', 'EUR', 4990, 0, 0, 4990, 'Luca')`).run(ago(2), ago(2));
+  const r = I.regia(db, { brand: 'vir3d', now: NOW });
+  assert.deepEqual(r.flow.map((f) => f.type === 'ordine' ? f.order.order_number : `${f.thread.thread_key}:${f.state}`),
+    ['VIR3D-9', 'RISPOSTA:in_attesa', 'ALTROVE:in_attesa_manuale']);
+  assert.deepEqual(r.perTe.map((t) => t.thread_key), ['APERTA']);
+  assert.equal(I.regia(db, { brand: 'deartis', now: NOW }).flow.length, 0, 'gli ordini Vir3D non entrano in De Artis');
+  I.setThreadState(db, 'APERTA', 'rimanda', { days: 7, now: NOW });
+  assert.deepEqual(I.regia(db, { brand: 'vir3d', show: 'rimandate', now: NOW }).flow.map((f) => f.thread.thread_key), ['APERTA']);
+});

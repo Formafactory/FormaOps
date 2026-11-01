@@ -1,7 +1,6 @@
 <%- include('_top', { title: 'Da collegare', section: 'collegare' }) %>
-<h1>Da collegare</h1>
-<p class="muted">Persone che ti hanno scritto ma che FormaOps non sa a quale cliente associare.
-  Collegale una volta: dal messaggio successivo verranno riconosciute da sole.</p>
+<header class="page-head"><div><h1>Da collegare</h1>
+<p>Chi ha scritto a <%= SPACES[brand].label %> ma non è ancora associato a un cliente. Collegalo una volta: dal messaggio successivo verrà riconosciuto da solo.</p></div></header>
 <% if (error) { %><p class="error"><%= error %></p><% } %>
 
 <% if (senders.length === 0) { %>
@@ -23,7 +22,7 @@
         <input type="hidden" name="address" value="<%= s.address %>"><input type="hidden" name="type" value="<%= s.type %>">
         <input name="name" value="<%= s.name || (s.type === 'instagram' ? '@' + s.address : '') %>" placeholder="Nome" size="18">
         <select name="brand">
-          <% BRANDS.forEach(function (b) { %><option value="<%= b %>" <%= (s.deartis_hint ? 'deartis' : 'vir3d') === b ? 'selected' : '' %>><%= BRAND_LABEL[b] %></option><% }) %>
+          <% BRANDS.forEach(function (b) { %><option value="<%= b %>" <%= brand === b ? 'selected' : '' %>><%= BRAND_LABEL[b] %></option><% }) %>
         </select>
         <button type="submit">Nuovo cliente</button>
       </form>
