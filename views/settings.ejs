@@ -67,6 +67,7 @@
     trattala come una password, resta solo su questo PC e puoi revocarla da Meta quando vuoi.</p>
   <% if (metaHasToken) { %><p class="small">Chiave salvata.
     <% if (metaPages.length) { %>Pagine collegate: <% metaPages.forEach(function (p, i) { %><strong><%= p.name %></strong><%= p.instagram ? ' (Instagram @' + p.instagram + ')' : ' (senza Instagram)' %><%= i < metaPages.length - 1 ? ', ' : '' %><% }) %>.<% } %></p><% } %>
+  <% if (metaScopes) { %><p class="small"><% if (metaScopes.missing.length) { %>Permessi che mancano alla chiave: <strong><%= metaScopes.missing.join(', ') %></strong>.<% } else { %>La chiave ha tutti i permessi che servono.<% } %></p><% } %>
   <% if (metaWarnings.length) { %>
     <div class="error small"><strong>Avvisi dell'ultimo aggiornamento:</strong><ul><% metaWarnings.forEach(function (w) { %><li><%= w %></li><% }) %></ul></div>
   <% } %>

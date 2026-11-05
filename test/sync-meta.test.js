@@ -188,3 +188,13 @@ test('commento salvato senza autore: quando Meta mostra il nome, viene completat
     { counterpart_address: 'fb:U7', counterpart_name: 'Teresa Gialli' });
   assert.equal(one(db, `SELECT COUNT(*) FROM messages WHERE id = 'fbcomment:fc4'`), 1);
 });
+
+test('controllo dei permessi della chiave: dice quali mancano', async (t) => {
+  const { fake } = await setup(t);
+  const { tokenScopes, WANTED_SCOPES } = require('../lib/sync-meta');
+  const r = await tokenScopes(fake.cfg);
+  assert.ok(r.missing.includes('pages_read_user_content'));
+  fake.state.scopes = WANTED_SCOPES;
+  assert.deepEqual((await tokenScopes(fake.cfg)).missing, []);
+  assert.ok(fake.state.requests.every((q) => q.method === 'GET'));
+});

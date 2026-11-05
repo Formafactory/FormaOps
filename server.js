@@ -14,7 +14,7 @@ const { syncVir3d, getState } = require('./lib/sync-vir3d');
 const vir3d = require('./lib/vir3d');
 const { getSetting, setSetting, vir3dConfig } = require('./lib/settings');
 const { syncGmail, gmailConfig, testConnection } = require('./lib/sync-gmail');
-const { syncMeta, metaConfig, testConnection: testMeta, testInstagramToken } = require('./lib/sync-meta');
+const { syncMeta, metaConfig, testConnection: testMeta, testInstagramToken, tokenScopes } = require('./lib/sync-meta');
 const M = require('./lib/messages');
 const I = require('./lib/inbox');
 const { normalizeEmail } = require('./lib/normalize');
@@ -366,6 +366,7 @@ app.get('/impostazioni', (req, res) => {
     backupCount: listBackups(backupDir()).length,
     metaPages: JSON.parse(getSetting(db, 'meta_pages') || '[]'),
     metaWarnings: JSON.parse(getSetting(db, 'meta_warnings') || '[]'),
+    metaScopes: JSON.parse(getSetting(db, 'meta_scopes') || 'null'),
     urgency: I.urgencyHours(db),
     perTeDays: I.perTeDays(db),
     msg: req.query.msg ?? null, ok: req.query.ok === '1',
@@ -409,11 +410,15 @@ app.post('/impostazioni/meta', async (req, res) => {
   if (token) setSetting(db, 'meta_token', token);
   if (req.body.days) setSetting(db, 'meta_days', String(Math.min(Math.max(Number(req.body.days) || 7, 1), 90)));
   try {
-    const pages = await testMeta(metaConfig(db));
+    const cfg = metaConfig(db);
+    const pages = await testMeta(cfg);
     setSetting(db, 'meta_pages', JSON.stringify(pages));
+    const sc = await tokenScopes(cfg);
+    if (sc) setSetting(db, 'meta_scopes', JSON.stringify(sc));
     const names = pages.map((p) => p.name + (p.instagram ? ` (Instagram @${p.instagram})` : ' (senza Instagram)')).join(', ');
+    const perms = !sc ? '' : sc.missing.length ? ` Permessi che mancano alla chiave: ${sc.missing.join(', ')}.` : ' La chiave ha tutti i permessi.';
     res.redirect('/impostazioni?ok=1&msg=' + encodeURIComponent(
-      `Facebook e Instagram collegati in lettura: ${names}. Ora vai sulla Regia e premi "Aggiorna".`));
+      `Facebook e Instagram collegati in lettura: ${names}.${perms} Ora vai sulla Regia e premi "Aggiorna".`));
   } catch (err) {
     res.redirect('/impostazioni?msg=' + encodeURIComponent(err.message));
   }

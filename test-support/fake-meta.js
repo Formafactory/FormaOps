@@ -102,6 +102,9 @@ function startFakeMeta(data = defaultData()) {
       return paged(data.pages);
     }
     if (parts.join('/') === 'me/adaccounts') return paged(data.adaccounts);
+    if (parts.join('/') === 'debug_token') {
+      return send(200, { data: { is_valid: true, scopes: state.scopes || ['pages_show_list', 'pages_read_engagement', 'pages_messaging'] } });
+    }
     if (parts.length === 0 && url.searchParams.get('ids')) {
       const out = {};
       for (const id of url.searchParams.get('ids').split(',')) if (data.adMedia[id]) out[id] = data.adMedia[id];
