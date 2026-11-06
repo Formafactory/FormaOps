@@ -19,7 +19,8 @@ const M = require('./lib/messages');
 const I = require('./lib/inbox');
 const { normalizeEmail } = require('./lib/normalize');
 const { runBackup, listBackups } = require('./lib/backup');
-const { createScheduler } = require('./lib/scheduler');
+const { createScheduler, createDailyScheduler } = require('./lib/scheduler');
+const adv = require('./lib/adv');
 
 const PORT = Number(process.env.PORT) || 3210;
 const DATA_DIR = resolveDataDir(process.env.DATA_DIR);
@@ -137,6 +138,7 @@ app.use((req, res, next) => {
                           GROUP BY contact_type, counterpart_address)`).pluck().get(brand),
     reviewOpen: si.reviewOpen,
     channels: channelsFor(brand, si),
+    advError: brand === 'vir3d' && db.prepare('SELECT ok FROM adv_sync_runs ORDER BY id DESC LIMIT 1').pluck().get() === 0,
   };
   next();
 });
@@ -273,6 +275,28 @@ for (const route of ['/sync', '/sync/vir3d']) {
     res.redirect('/?sync=' + encodeURIComponent(await scheduler.runNow()));
   });
 }
+
+// ADV: dati Meta Ads (sola lettura). Ogni notte alle 05:00 ora italiana, più il pulsante "Aggiorna ora".
+const advScheduler = createDailyScheduler({
+  hour: 5, minute: 0, timeZone: 'Europe/Rome', log: console.log,
+  run: async () => (await adv.syncAdv(db, { trigger: 'notte', log: console.log })).summary,
+});
+
+app.get('/adv', (req, res) => {
+  const campaign = String(req.query.campagna || '');
+  const ad = String(req.query.inserzione || '');
+  const data = adv.advPage(db, { brand: res.locals.brand, campaign, ad });
+  res.render('adv', {
+    ...data, campaign, ad, running: adv.isRunning(),
+    nextRunAt: advScheduler.state.nextRunAt, configError: adv.configError(adv.advConfig()),
+  });
+});
+
+app.post('/adv/aggiorna', (req, res) => {
+  // In background: la pagina mostra "in corso" e si ricarica da sola finché non finisce.
+  if (!adv.isRunning()) adv.syncAdv(db, { trigger: 'manuale', log: console.log }).catch((err) => console.error(`[adv] errore: ${err.message}`));
+  res.redirect('/adv');
+});
 
 app.post('/impostazioni/automatico', (req, res) => {
   const m = Math.min(Math.max(Number(req.body.minutes) || 0, 0), 240);
@@ -559,10 +583,15 @@ const server = app.listen(PORT, '127.0.0.1', () => {
   const m = scheduler.state.minutes;
   console.log(m ? `[auto] aggiornamento automatico ogni ${m} minuti (il primo tra 30 secondi)` : '[auto] aggiornamento automatico spento');
   scheduler.start();
+  advScheduler.start();
+  console.log(`[adv] dati Meta Ads ogni notte alle 05:00 (ora italiana), prossimo giro: ${app.locals.when(advScheduler.state.nextRunAt)}`);
+  // Recupero all'avvio: se l'ultimo giro ADV riuscito ha più di 24 ore, si aggiorna subito.
+  adv.startupCatchUp(db, { log: console.log }).catch((err) => console.error(`[adv] recupero all'avvio non riuscito: ${err.message}`));
 });
 
 function shutdown() {
   scheduler.stop();
+  advScheduler.stop();
   server.close(() => { db.close(); process.exit(0); });
 }
 process.on('SIGINT', shutdown);

@@ -1,0 +1,6 @@
+[
+  { "id": "c1", "name": "Ambigrammi — Vendite", "effective_status": "ACTIVE", "daily_budget": "3000", "objective": "OUTCOME_SALES",
+    "created_time": "2026-09-01T10:00:00+0200", "updated_time": "2026-10-20T09:00:00+0200" },
+  { "id": "c2", "name": "Mezzibusti — Traffico", "effective_status": "PAUSED", "lifetime_budget": "50000", "objective": "OUTCOME_TRAFFIC",
+    "created_time": "2026-08-01T10:00:00+0200", "updated_time": "2026-10-01T09:00:00+0200" }
+]

@@ -1,0 +1,10 @@
+[
+  { "id": "s1", "name": "Italia 25-55", "campaign_id": "c1", "effective_status": "ACTIVE", "optimization_goal": "OFFSITE_CONVERSIONS",
+    "attribution_spec": [{ "event_type": "CLICK_THROUGH", "window_days": 7 }, { "event_type": "VIEW_THROUGH", "window_days": 1 }, { "event_type": "ENGAGED_VIDEO_VIEW", "window_days": 1 }],
+    "created_time": "2026-09-01T10:00:00+0200", "updated_time": "2026-10-20T09:00:00+0200" },
+  { "id": "s2", "name": "Retargeting 30 giorni", "campaign_id": "c1", "effective_status": "ACTIVE", "optimization_goal": "OFFSITE_CONVERSIONS",
+    "attribution_spec": [{ "event_type": "CLICK_THROUGH", "window_days": 7 }, { "event_type": "VIEW_THROUGH", "window_days": 1 }, { "event_type": "ENGAGED_VIDEO_VIEW", "window_days": 1 }],
+    "created_time": "2026-09-01T10:00:00+0200", "updated_time": "2026-10-20T09:00:00+0200" },
+  { "id": "s3", "name": "Interessi arte", "campaign_id": "c2", "effective_status": "CAMPAIGN_PAUSED", "optimization_goal": "LINK_CLICKS",
+    "created_time": "2026-08-01T10:00:00+0200", "updated_time": "2026-10-01T09:00:00+0200" }
+]

@@ -11,7 +11,9 @@
   "scripts": {
     "start": "node server.js",
     "test": "node --test --test-timeout=30000",
-    "sync:vir3d": "node scripts/sync-vir3d.js"
+    "sync:vir3d": "node scripts/sync-vir3d.js",
+    "adv:check": "node scripts/adv-check.js",
+    "adv:sync": "node scripts/adv-sync.js"
   },
   "dependencies": {
     "better-sqlite3": "^12.4.1",

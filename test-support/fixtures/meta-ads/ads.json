@@ -1,0 +1,13 @@
+[
+  { "id": "ad1", "name": "Ambigramma oro — carosello", "adset_id": "s1", "campaign_id": "c1", "effective_status": "ACTIVE",
+    "created_time": "2026-09-01T10:00:00+0200", "updated_time": "2026-10-20T09:00:00+0200",
+    "creative": { "id": "cr1", "url_tags": "utm_source=facebook&utm_medium=paid&utm_campaign={{campaign.name}}&utm_content={{ad.id}}",
+      "object_story_spec": { "page_id": "P1", "link_data": { "link": "https://vir3d.it/ambigrammi", "message": "Il regalo perfetto" } } } },
+  { "id": "ad2", "name": "Retargeting — video", "adset_id": "s2", "campaign_id": "c1", "effective_status": "ACTIVE",
+    "created_time": "2026-09-01T10:00:00+0200", "updated_time": "2026-10-20T09:00:00+0200",
+    "creative": { "id": "cr2", "object_story_spec": { "page_id": "P1", "video_data": { "video_id": "v1",
+      "call_to_action": { "type": "SHOP_NOW", "value": { "link": "https://vir3d.it/?utm_source=meta" } } } } } },
+  { "id": "ad4", "name": "Mezzobusto bronzo", "adset_id": "s3", "campaign_id": "c2", "effective_status": "CAMPAIGN_PAUSED",
+    "created_time": "2026-08-01T10:00:00+0200", "updated_time": "2026-10-01T09:00:00+0200",
+    "creative": { "id": "cr4", "asset_feed_spec": { "link_urls": [{ "website_url": "https://vir3d.it/mezzibusti" }] } } }
+]

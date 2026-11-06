@@ -206,6 +206,23 @@ a.frow:hover { background: #fafbfc; }
 /* Da collegare */
 .sender-actions { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; align-items: center; }
 
+/* ADV · Meta Ads */
+.adv-status h2 { margin-bottom: 10px; }
+.adv-status p + p { margin-top: 8px; }
+.adv-note { margin: -4px 0 14px; }
+.adv-summary { margin-bottom: 16px; }
+.adv-filters { display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 12px; }
+.adv-filters label { display: grid; gap: 4px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.adv-filters select { min-width: 240px; max-width: 360px; }
+.table-wrap { overflow-x: auto; border-radius: 12px; }
+.adv-table th, .adv-table td { padding: 9px 12px; font-size: 14px; font-variant-numeric: tabular-nums; }
+.adv-table tr.muted td { color: var(--muted); }
+.adv-table tfoot th { color: var(--ink); background: var(--grey-soft); border-top: 1px solid var(--line); border-bottom: 0; }
+.adv-ads td { font-size: 14px; }
+.adv-url { font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; word-break: break-all; max-width: 320px; color: var(--text2); }
+.chip.adv-yes { background: var(--ok-soft); color: var(--ok); }
+.chip.adv-no { background: var(--red-soft); color: var(--red); }
+
 @media (max-width: 960px) {
   .thread-layout { grid-template-columns: 1fr; }
   .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }

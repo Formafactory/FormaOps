@@ -29,6 +29,7 @@
     <a href="/clienti" class="<%= sec === 'clienti' ? 'on' : '' %>">Clienti</a>
     <a href="/da-collegare" class="<%= sec === 'collegare' ? 'on' : '' %>">Da collegare<% if (nav.unlinked) { %><span class="badge"><%= nav.unlinked %></span><% } %></a>
     <% if (nav.reviewOpen) { %><a href="/verifica" class="<%= sec === 'verifica' ? 'on' : '' %>">Da verificare<span class="badge"><%= nav.reviewOpen %></span></a><% } %>
+    <a href="/adv" class="<%= sec === 'adv' ? 'on' : '' %>">ADV<% if (nav.advError) { %><span class="badge hot" title="L'ultimo aggiornamento dei dati Meta Ads non è riuscito">!</span><% } %></a>
     <a href="/impostazioni" class="<%= sec === 'impostazioni' ? 'on' : '' %>">Impostazioni</a>
   </nav>
 

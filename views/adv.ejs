@@ -1,0 +1,161 @@
+<%- include('_top', { title: 'ADV', section: 'adv', autoRefresh: running ? 5 : 0 }) %>
+<%
+  var cur = account ? account.currency || 'EUR' : 'EUR';
+  var nf = new Intl.NumberFormat('it-IT');
+  var rf = new Intl.NumberFormat('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  var dayLabel = function (ymd) {
+    var p = ymd.split('-').map(Number);
+    return new Date(Date.UTC(p[0], p[1] - 1, p[2])).toLocaleDateString('it-IT', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short' });
+  };
+  var shortDate = function (ymd) { return ymd ? ymd.split('-').reverse().join('/') : '—'; };
+  var TRIGGER = { notte: 'giro notturno', manuale: 'Aggiorna ora', avvio: "recupero all'avvio" };
+  var attr = attribution.length ? attribution.map(function (a) { return a.label; }).join(' / ') : 'non ancora letta da Meta';
+  var interrupted = lastRun && lastRun.ok === null && !running;
+%>
+
+<header class="page-head">
+  <div>
+    <h1>ADV · Meta Ads</h1>
+    <p>Spesa e risultati delle inserzioni come li dichiara Meta. FormaOps legge soltanto: non crea, non modifica e non attiva nulla su Meta.</p>
+  </div>
+  <% if (brand === 'vir3d') { %>
+  <div class="right">
+    <span><%= lastOk ? 'Aggiornato alle ' + clock(lastOk.finished_at) : 'Mai aggiornato' %></span>
+    <form method="post" action="/adv/aggiorna" class="inline-form" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Avvio…'">
+      <button type="submit" class="secondary" <%= running ? 'disabled' : '' %>><%= running ? 'Aggiorno…' : 'Aggiorna ora' %></button>
+    </form>
+  </div>
+  <% } %>
+</header>
+
+<% if (brand !== 'vir3d' && !account) { %>
+  <p class="empty">Nessun account pubblicitario di De Artis collegato a FormaOps. Per ora il modulo ADV legge l'account delle inserzioni di Vir3D: lo trovi nello spazio Vir3D.</p>
+<% } else { %>
+
+<section class="card adv-status">
+  <h2>Stato dell'ultimo aggiornamento</h2>
+  <% if (running) { %>
+    <p class="ok">Aggiornamento in corso: la pagina si ricarica da sola.</p>
+  <% } else if (!lastRun) { %>
+    <p class="muted">Nessun aggiornamento ancora eseguito.</p>
+  <% } else if (interrupted) { %>
+    <p class="error">L'aggiornamento del <%= when(lastRun.started_at) %> si è interrotto (FormaOps è stato chiuso mentre lavorava). Premi "Aggiorna ora".</p>
+  <% } else if (lastRun.ok) { %>
+    <p class="ok">Riuscito il <%= when(lastRun.finished_at) %> (<%= TRIGGER[lastRun.trigger] %>): <%= nf.format(lastRun.rows_written) %> righe giornaliere
+      dal <%= shortDate(lastRun.since_date) %> al <%= shortDate(lastRun.until_date) %>.</p>
+  <% } else { %>
+    <p class="error"><strong>Non riuscito</strong> il <%= when(lastRun.finished_at || lastRun.started_at) %> (<%= TRIGGER[lastRun.trigger] %>).<br><%= lastRun.error %></p>
+    <% if (lastOk) { %><p class="small muted">L'ultimo aggiornamento riuscito è del <%= when(lastOk.finished_at) %>: i numeri qui sotto si fermano lì.</p><% } %>
+  <% } %>
+  <% if (configError && !(lastRun && lastRun.error === configError)) { %><p class="error"><%= configError %></p><% } %>
+  <p class="small muted">Prossimo giro automatico: <%= nextRunAt ? when(nextRunAt) : '—' %>. Ogni notte alle 05:00 si riscaricano gli ultimi 7 giorni, perché Meta aggiorna le conversioni anche dopo.</p>
+</section>
+
+<% if (account) { %>
+<section>
+  <div class="sec-head">
+    <div class="t">
+      <h2>Dati dichiarati da Meta (finestra di attribuzione: <%= attr %>)</h2>
+    </div>
+  </div>
+  <p class="small muted adv-note">Non sono ancora gli ordini reali di vir3d.it: il confronto con gli ordini arriva nel prossimo blocco.
+    Ultimi 30 giorni, dal <%= shortDate(since) %> al <%= shortDate(until) %>, nel fuso dell'account (<%= account.timezone_name %>).</p>
+
+  <div class="summary adv-summary">
+    <div><div class="k">Spesa</div><div class="v"><%= money(totals.spend, cur) %></div></div>
+    <div><div class="k">Acquisti</div><div class="v"><%= nf.format(totals.purchases) %></div></div>
+    <div><div class="k">Valore acquisti</div><div class="v"><%= money(totals.value, cur) %></div></div>
+    <div><div class="k">ROAS</div><div class="v"><%= totals.roas === null ? '—' : rf.format(totals.roas) %></div></div>
+  </div>
+
+  <form method="get" action="/adv" class="adv-filters">
+    <label>Campagna
+      <select name="campagna" onchange="this.form.inserzione.value=''; this.form.submit()">
+        <option value="">Tutte le campagne</option>
+        <% campaigns.forEach(function (c) { %><option value="<%= c.id %>" <%= campaign === c.id ? 'selected' : '' %>><%= c.name || c.id %></option><% }) %>
+      </select>
+    </label>
+    <label>Inserzione
+      <select name="inserzione" onchange="this.form.submit()">
+        <option value="">Tutte le inserzioni</option>
+        <% ads.forEach(function (a) { %><option value="<%= a.id %>" <%= ad === a.id ? 'selected' : '' %>><%= a.name || a.id %></option><% }) %>
+      </select>
+    </label>
+    <noscript><button type="submit" class="secondary">Filtra</button></noscript>
+    <% if (campaign || ad) { %><a href="/adv" class="small">Togli i filtri</a><% } %>
+  </form>
+
+  <div class="table-wrap">
+  <table class="list adv-table">
+    <thead>
+      <tr><th>Giorno</th><th class="amount">Spesa</th><th class="amount">Clic sul link</th><th class="amount">Aggiunte al carrello</th>
+        <th class="amount">Checkout iniziati</th><th class="amount">Acquisti</th><th class="amount">Valore acquisti</th>
+        <th class="amount">Costo per acquisto</th><th class="amount">ROAS</th></tr>
+    </thead>
+    <tbody>
+      <% days.forEach(function (d) { var zero = !d.spend && !d.purchases && !d.link_clicks; %>
+      <tr class="<%= zero ? 'muted' : '' %>">
+        <td class="nowrap"><%= dayLabel(d.date) %></td>
+        <td class="amount"><%= money(d.spend, cur) %></td>
+        <td class="amount"><%= nf.format(d.link_clicks) %></td>
+        <td class="amount"><%= nf.format(d.add_to_cart) %></td>
+        <td class="amount"><%= nf.format(d.initiate_checkout) %></td>
+        <td class="amount"><%= nf.format(d.purchases) %></td>
+        <td class="amount"><%= money(d.value, cur) %></td>
+        <td class="amount"><%= d.cpa === null ? '—' : money(d.cpa, cur) %></td>
+        <td class="amount"><%= d.roas === null ? '—' : rf.format(d.roas) %></td>
+      </tr>
+      <% }) %>
+    </tbody>
+    <tfoot>
+      <tr>
+        <th>Totale 30 giorni</th>
+        <th class="amount"><%= money(totals.spend, cur) %></th>
+        <th class="amount"><%= nf.format(totals.link_clicks) %></th>
+        <th class="amount"><%= nf.format(totals.add_to_cart) %></th>
+        <th class="amount"><%= nf.format(totals.initiate_checkout) %></th>
+        <th class="amount"><%= nf.format(totals.purchases) %></th>
+        <th class="amount"><%= money(totals.value, cur) %></th>
+        <th class="amount"><%= totals.cpa === null ? '—' : money(totals.cpa, cur) %></th>
+        <th class="amount"><%= totals.roas === null ? '—' : rf.format(totals.roas) %></th>
+      </tr>
+    </tfoot>
+  </table>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="t">
+      <h2>Inserzioni attive: link e parametri URL</h2>
+      <span class="count"><%= activeAds.length %></span>
+      <span class="sub">servono a collegare gli ordini alle inserzioni</span>
+    </div>
+  </div>
+  <% if (!activeAds.length) { %>
+    <p class="empty">Nessuna inserzione attiva in questo momento.</p>
+  <% } else { %>
+  <div class="table-wrap">
+  <table class="list adv-ads">
+    <thead><tr><th>Inserzione</th><th>Link di destinazione</th><th>Parametri URL</th><th>UTM</th><th>ID inserzione</th></tr></thead>
+    <tbody>
+      <% activeAds.forEach(function (a) { %>
+      <tr>
+        <td><strong><%= a.name || a.id %></strong><br><span class="small muted"><%= a.campaign_name || '' %> · <%= a.id %></span></td>
+        <td class="adv-url"><%= a.link_url || '— non indicato dalla creatività' %></td>
+        <td class="adv-url"><%= a.url_tags || '—' %></td>
+        <td><span class="chip <%= a.hasUtm ? 'adv-yes' : 'adv-no' %>"><%= a.hasUtm ? 'sì' : 'no' %></span></td>
+        <td><span class="chip <%= a.hasAdId ? 'adv-yes' : 'adv-no' %>"><%= a.hasAdId ? 'sì' : 'no' %></span></td>
+      </tr>
+      <% }) %>
+    </tbody>
+  </table>
+  </div>
+  <% } %>
+</section>
+
+<p class="small muted">Account <strong><%= account.name %></strong> (<%= account.id %>) · valuta <%= account.currency %> · fuso <%= account.timezone_name %>
+  <% if (specs.length) { %>· finestra impostata sui gruppi di inserzioni: <%= specs.map(function (s) { return s.label + ' (' + s.n + ')'; }).join(' / ') %><% } %></p>
+<% } %>
+<% } %>
+<%- include('_bottom') %>
