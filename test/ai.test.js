@@ -189,3 +189,30 @@ test('commento ambiguo: blocca la deviazione generica ai DM, ma permette la priv
   assert.equal(A.guardCommentDraft(order, 'Scrivici in privato con il numero di ordine.', ''),
     'Scrivici in privato con il numero di ordine.');
 });
+
+
+test('inserzione reale: frase "Riesci a leggerlo al contrario?" identifica ambigramma, non il prezzo della variante', () => {
+  const db = freshDb();
+  msg(db, { thread: 'adv-reverse', source: 'facebook_comment', type: 'facebook',
+    who: 'fb:anonimo-ad', account: 'Vir3d Italia',
+    text: 'Scusa è un regalo, posso vedere Anna e Pasquale e sapere il costo?' });
+  const subject = "Commento all'inserzione: ⚠️ Riesci a leggerlo al contrario? 👀 Non è solo …";
+  db.prepare('UPDATE messages SET subject = ? WHERE thread_key = ?').run(subject, 'adv-reverse');
+  const t = I.thread(db, 'adv-reverse');
+  assert.equal(A.commentProductContext(t).product, 'ambigramma');
+  const [sys, user] = A.buildMessages(db, t);
+  assert.match(user.content, /PRODOTTO DAL POST: Ambigramma personalizzato/);
+  assert.match(sys.content, /non attribuire un prezzo unico/);
+  for (const reply of [
+    'Per il Mini-Me di Anna e Pasquale servono foto.',
+    'Il tuo ambigramma costa 34,90 €.',
+    'Ti mostriamo una anteprima prima dell\'ordine.',
+  ]) {
+    assert.match(A.guardCommentDraft(t, reply, A.defaultKnowledge('vir3d')),
+      /\[DA COMPLETARE:/, reply);
+  }
+  assert.equal(A.guardCommentDraft(t,
+    'Ciao! I nomi si scelgono nel configuratore dell\'ambigramma. Non è prevista l\'anteprima prima dell\'ordine.',
+    A.defaultKnowledge('vir3d')),
+    'Ciao! I nomi si scelgono nel configuratore dell\'ambigramma. Non è prevista l\'anteprima prima dell\'ordine.');
+});
