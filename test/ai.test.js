@@ -247,6 +247,10 @@ test('regola commerciale Vir3D: ambigramma generico = Premium, EcoGreen soltanto
     "L'ambigramma Premium costa 49,90 €.", knowledge), /\[DA COMPLETARE:/);
   const ecoAd = make("Commento all'inserzione: https://vir3d.it/products/ambigramma-ecogreen", 'Anna e Pasquale');
   assert.equal(A.commentProductContext(ecoAd).variant, 'eco');
+  assert.equal(A.commentProductContext(make("Commento al post: Ambigramma Premium", 'Vorrei EcoGreen')).variant,
+    'eco', 'la scelta esplicita del cliente prevale sulla versione pubblicizzata');
+  assert.equal(A.commentProductContext(make("Commento al post: Ambigramma EcoGreen", 'Vorrei Premium')).variant,
+    'premium');
   const conflict = make("Commento al post: Ambigramma Premium o EcoGreen?", 'Anna e Pasquale');
   assert.equal(A.commentProductContext(conflict).variant, null);
   assert.match(A.guardCommentDraft(conflict, "Costa 49,90 €.", knowledge), /\[DA COMPLETARE:/);
