@@ -219,3 +219,17 @@ test('il testo esteso del post aggiorna anche commenti esistenti, senza duplicar
   assert.equal(one(db, 'SELECT based_on FROM ai_drafts WHERE thread_key = ?', key), '',
     'la vecchia bozza rimane conservata ma va rigenerata');
 });
+
+
+test('inserzione con landing verificata: la pagina prodotto entra nel contesto del commento', async (t) => {
+  const { fake, db } = await setup(t);
+  db.prepare("INSERT INTO adv_accounts (id, brand, name) VALUES ('act_1', 'vir3d', 'Vir3D Ads')").run();
+  db.prepare("INSERT INTO adv_entities (id, account_id, level, creative_id, link_url, fetched_at) VALUES ('ad3', 'act_1', 'ad', 'creative3', ?, ?)")
+    .run('https://vir3d.it/products/ambigramma-premium?utm_source=meta', new Date().toISOString());
+  fake.state.data.ads.act_1[2].creative.id = 'creative3';
+  const r = await syncMeta(db, { cfg: fake.cfg });
+  assert.equal(r.ok, true, r.error);
+  const context = one(db, 'SELECT subject FROM messages WHERE id = ?', 'fbcomment:fc5');
+  assert.match(context, /https:\/\/vir3d\.it\/products\/ambigramma-premium/);
+  assert.doesNotMatch(context, /utm_source=/, 'la destinazione è ripulita dai parametri traccianti');
+});
