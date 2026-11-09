@@ -191,7 +191,7 @@ test('commento ambiguo: blocca la deviazione generica ai DM, ma permette la priv
 });
 
 
-test('inserzione reale: frase "Riesci a leggerlo al contrario?" identifica ambigramma, non il prezzo della variante', () => {
+test('inserzione reale: frase "Riesci a leggerlo al contrario?" identifica Premium di default, non EcoGreen', () => {
   const db = freshDb();
   msg(db, { thread: 'adv-reverse', source: 'facebook_comment', type: 'facebook',
     who: 'fb:anonimo-ad', account: 'Vir3d Italia',
@@ -202,7 +202,8 @@ test('inserzione reale: frase "Riesci a leggerlo al contrario?" identifica ambig
   assert.equal(A.commentProductContext(t).product, 'ambigramma');
   const [sys, user] = A.buildMessages(db, t);
   assert.match(user.content, /PRODOTTO DAL POST: Ambigramma personalizzato/);
-  assert.match(sys.content, /non attribuire un prezzo unico/);
+  assert.match(user.content, /VARIANTE: Premium \(predefinita/);
+  assert.match(sys.content, /la variante è Premium/);
   for (const reply of [
     'Per il Mini-Me di Anna e Pasquale servono foto.',
     'Il tuo ambigramma costa 34,90 €.',
@@ -215,4 +216,38 @@ test('inserzione reale: frase "Riesci a leggerlo al contrario?" identifica ambig
     'Ciao! I nomi si scelgono nel configuratore dell\'ambigramma. Non è prevista l\'anteprima prima dell\'ordine.',
     A.defaultKnowledge('vir3d')),
     'Ciao! I nomi si scelgono nel configuratore dell\'ambigramma. Non è prevista l\'anteprima prima dell\'ordine.');
+});
+
+
+test('regola commerciale Vir3D: ambigramma generico = Premium, EcoGreen soltanto esplicito', () => {
+  const knowledge = A.defaultKnowledge('vir3d');
+  const post = "Commento all'inserzione: ⚠️ Riesci a leggerlo al contrario? 👀 Non è solo …";
+  const make = (subject, customerMessage) => ({
+    source: 'facebook_comment', brand: 'vir3d', subject,
+    messages: [{ direction: 'in', snippet: customerMessage }],
+  });
+  const premium = make(post, 'Anna e Pasquale, quanto costa?');
+  assert.equal(A.commentProductContext(premium).variant, 'premium');
+  assert.equal(A.guardCommentDraft(premium,
+    "Ciao! L'ambigramma Premium costa 49,90 € e include incisione e confezione regalo.", knowledge),
+    "Ciao! L'ambigramma Premium costa 49,90 € e include incisione e confezione regalo.");
+  for (const wrong of [
+    "L'ambigramma EcoGreen costa 34,90 €.",
+    "Il prezzo è 34,90 €.",
+    "Possiamo realizzarlo esattamente come richiesto.",
+  ]) {
+    assert.match(A.guardCommentDraft(premium, wrong, knowledge), /\[DA COMPLETARE:/, wrong);
+  }
+  const eco = make(post, 'Vorrei la versione Eco, quanto costa?');
+  assert.equal(A.commentProductContext(eco).variant, 'eco');
+  assert.equal(A.guardCommentDraft(eco,
+    "Ciao! L'ambigramma EcoGreen costa 34,90 €.", knowledge),
+    "Ciao! L'ambigramma EcoGreen costa 34,90 €.");
+  assert.match(A.guardCommentDraft(eco,
+    "L'ambigramma Premium costa 49,90 €.", knowledge), /\[DA COMPLETARE:/);
+  const ecoAd = make("Commento all'inserzione: https://vir3d.it/products/ambigramma-ecogreen", 'Anna e Pasquale');
+  assert.equal(A.commentProductContext(ecoAd).variant, 'eco');
+  const conflict = make("Commento al post: Ambigramma Premium o EcoGreen?", 'Anna e Pasquale');
+  assert.equal(A.commentProductContext(conflict).variant, null);
+  assert.match(A.guardCommentDraft(conflict, "Costa 49,90 €.", knowledge), /\[DA COMPLETARE:/);
 });
