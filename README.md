@@ -66,6 +66,13 @@ Si leggono con una chiave dell'account Instagram (API con login Instagram): guid
 Con Tailscale (gratuito), senza aprire FormaOps a internet né al Wi-Fi del laboratorio: guida in
 [docs/accesso-dal-telefono.md](docs/accesso-dal-telefono.md). Sul telefono il menu diventa una barra compatta in alto.
 
+## Assistente AI (bozze di risposta)
+
+Per ogni conversazione in "Per te" l'AI (OpenAI) prepara una bozza: la trovi nella conversazione, la correggi,
+premi "Copia e apri" e la invii dal canale. FormaOps non invia nulla da solo e non scrive bozze per i contatti "Personale".
+Chiave in **Impostazioni → Assistente AI**; cosa sa l'AI di ciascun brand (prezzi, tempi, politiche, voce e firma) in
+**Assistente AI**. Il testo di partenza di Vir3D è ricavato da vir3d.it (`conoscenze/vir3d.md`).
+
 ## Le schermate
 
 Vir3D e De Artis sono due spazi separati: si passa dall'uno all'altro in alto nel menu. Ogni spazio ha i suoi canali,
@@ -108,4 +115,5 @@ npm test
 - Blocco 6 — Relationship Intelligence e Inbox con stati e urgenza: fatto.
 - Blocco 7 — spazi separati Vir3D / De Artis, Regia (Per te + Il flusso), nuova interfaccia: fatto.
 - Accesso dal telefono con Tailscale (guida) e versione mobile compatta: fatto.
+- Blocco 8 — Assistente AI: bozze di risposta con OpenAI, conoscenze per brand: fatto.
 - In pausa: DM Instagram (errore della pagina Meta). Da collegare: Gmail e Pagina De Artis.

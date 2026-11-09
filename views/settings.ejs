@@ -60,6 +60,28 @@
 </div>
 
 <h2>Comuni ai due brand</h2>
+<section class="card" id="ai">
+  <h2>Assistente AI (OpenAI)</h2>
+  <p class="small">Scrive le <strong>bozze</strong> di risposta per "Per te": non invia nulla. Per scriverle manda a OpenAI la conversazione,
+    i dati e gli ordini del cliente e le conoscenze del brand. Si paga a consumo sul tuo account OpenAI.
+    <% if (ai.hasKey) { %><br>Chiave salvata.<% } %></p>
+  <form class="form" method="post" action="/impostazioni/ai">
+    <label>Chiave API di OpenAI
+      <input name="key" type="password" autocomplete="off" placeholder="<%= ai.hasKey ? 'lascia vuoto per usare quella salvata' : 'incolla qui la chiave che inizia con sk-' %>">
+    </label>
+    <% if (ai.models.length) { %>
+      <label>Modello
+        <select name="model">
+          <% ai.models.forEach(function (m) { %><option value="<%= m %>" <%= ai.model === m ? 'selected' : '' %>><%= m %></option><% }) %>
+        </select>
+        <span class="muted small" style="font-weight: normal">In cima i più economici: per le bozze bastano.</span></label>
+    <% } %>
+    <label class="check"><input type="checkbox" name="auto" value="1" <%= ai.auto ? 'checked' : '' %>> Prepara le bozze in automatico dopo ogni aggiornamento</label>
+    <label>Al massimo <input name="daily" type="number" min="1" max="500" value="<%= ai.dailyMax %>" style="width: 90px"> bozze al giorno</label>
+    <div class="actions"><button type="submit">Salva e prova</button></div>
+  </form>
+</section>
+
 <section class="card">
   <h2>Facebook e Instagram</h2>
   <p class="small">FormaOps <strong>legge soltanto</strong> messaggi di Messenger, DM di Instagram e commenti ai post e alle inserzioni.

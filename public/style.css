@@ -256,3 +256,18 @@ a.frow:hover { background: #fafbfc; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 .form label:has(> input[type=number]), .form label:has(> span > input[type=number]) { display: block; }
 .form label input[type=number] { margin: 0 6px; }
+
+/* Bozza dell'AI */
+.draft { margin-top: 18px; background: var(--card); border: 1px solid #d8c59a; border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+.draft-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.draft-head h2 { font-size: 17px; }
+.draft textarea { width: 100%; font-size: 15px; line-height: 1.55; resize: vertical; }
+.draft .regen { display: flex; gap: 8px; flex-wrap: wrap; }
+.draft .regen input { flex: 1; min-width: 220px; }
+.warn { background: var(--warn-soft); color: var(--warn); padding: 8px 12px; border-radius: 8px; margin: 0; }
+.draft-peek { display: block; margin-top: 10px; padding: 8px 12px; border-radius: 8px; background: #faf6ec; border: 1px solid #eee2c6; color: var(--text2);
+  text-decoration: none; font-size: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.draft-peek strong { color: #7a5a17; margin-right: 4px; }
+.draft-peek:hover { border-color: #d8c59a; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.knowledge textarea { width: 100%; font-family: inherit; font-size: 14px; line-height: 1.55; }

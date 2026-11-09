@@ -15,7 +15,9 @@ Valgono per ogni sessione di lavoro su questo repository.
 - Query in SQL esplicito e leggibile.
 - Nessuna scrittura verso sistemi esterni (Vir3D, Gmail, Meta, altro), mai. Solo lettura.
 - La produzione Vir3D non si tocca senza autorizzazione esplicita di Gianluca.
-- Niente AI, niente risposte automatiche, niente astrazioni "per il futuro".
+- AI: autorizzata da Gianluca (9 nov 2026) SOLO per scrivere bozze di risposta con OpenAI (lib/ai.js), che lui legge,
+  corregge e invia dal canale. Nessun invio automatico, mai bozze per i contatti "Personale". A OpenAI vanno conversazione,
+  dati/ordini del cliente e conoscenze del brand. Niente risposte automatiche, niente astrazioni "per il futuro".
 - Commit direttamente su `main`. Niente branch, niente pull request.
 - Segreti solo in `.env` (mai committato); `.env.example` documenta le variabili.
 
@@ -30,6 +32,7 @@ Valgono per ogni sessione di lavoro su questo repository.
 4. Meta: DM e commenti Facebook/Instagram, organici e inserzioni — 5. Sync automatica, backup, accesso remoto.
 6. Relationship Intelligence (relazione automatica + manuale) e Inbox con stati, urgenza e priorità.
 7. Spazi separati Vir3D / De Artis e interfaccia "Regia" (Per te + Il flusso), dalla bozza A scelta da Gianluca.
+8. Assistente AI: bozze di risposta (OpenAI) con conoscenze per brand (conoscenze/*.md come testo di partenza).
 
 Visione complessiva (fasi successive, da autorizzare una alla volta): canali → Inbox unica → Customer 360 →
 Relationship Intelligence → motore delle decisioni → AI controllata (Read → Suggest → Prepare → Approve → Execute) → marketing.

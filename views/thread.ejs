@@ -56,6 +56,36 @@
     </div>
     <p class="note">Qui vedi l'anteprima dei messaggi. Il testo completo e la risposta sono nel canale originale.
       <% if (t.status !== 'da_rispondere') { %>Se il cliente riscrive, la conversazione torna da sola tra quelle per te.<% } %></p>
+
+    <section class="draft" id="bozza">
+      <div class="draft-head">
+        <h2>Bozza dell'AI</h2>
+        <% if (draft) { %><span class="muted small">scritta alle <%= clock(draft.created_at) %><%= draft.instruction ? ', con la tua indicazione: "' + draft.instruction + '"' : '' %></span><% } %>
+      </div>
+      <% if (aiError) { %><p class="error small"><%= aiError %></p><% } %>
+      <% if (t.relationship === 'personale') { %>
+        <p class="small muted" style="margin: 0">Contatto personale: l'AI non scrive bozze per questi contatti.</p>
+      <% } else if (!aiReady) { %>
+        <p class="small muted" style="margin: 0">L'assistente AI non è ancora collegato. <a href="/impostazioni#ai">Collegalo in Impostazioni</a>.</p>
+      <% } else { %>
+        <% if (draft) { %>
+          <% if (draftStale) { %><p class="warn small">Il cliente ha scritto dopo questa bozza: rigenerala per tenerne conto.</p><% } %>
+          <label class="sr-only" for="draft-text">Testo della bozza</label>
+          <textarea id="draft-text" rows="<%= Math.min(18, Math.max(6, draft.draft.split('\n').length + Math.ceil(draft.draft.length / 90))) %>"><%= draft.draft %></textarea>
+          <div class="actions">
+            <% if (t.link) { %><button type="button" data-url="<%= t.link %>" onclick="copyDraft(this.dataset.url)">Copia e apri in <%= ({ gmail: 'Gmail', messenger: 'Meta', instagram: 'Meta', facebook_comment: 'Facebook', instagram_comment: 'Instagram' })[t.source] || 'nel canale' %></button><% } %>
+            <button type="button" class="secondary" onclick="copyDraft()">Copia</button>
+            <span class="small muted" id="copied" role="status"></span>
+          </div>
+          <p class="note" style="margin-top: 8px">Controlla sempre prezzi, date e nomi prima di inviare. Le parti tra [DA COMPLETARE] le devi scrivere tu.</p>
+        <% } %>
+        <form method="post" action="/conversazioni/bozza" class="regen" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Scrivo…'">
+          <input type="hidden" name="k" value="<%= t.thread_key %>"><input type="hidden" name="da" value="<%= back %>">
+          <input name="indicazione" maxlength="500" placeholder="<%= draft ? 'Indicazione per rifarla (es. più breve, proponi il ritiro in laboratorio)' : 'Indicazione facoltativa per l\'AI' %>" aria-label="Indicazione per l'AI">
+          <button type="submit" class="<%= draft ? 'secondary' : '' %>"><%= draft ? 'Rigenera' : 'Prepara bozza' %></button>
+        </form>
+      <% } %>
+    </section>
   </div>
 
   <aside>
@@ -89,4 +119,13 @@
     <% } %>
   </aside>
 </div>
+<script>
+function copyDraft(url) {
+  var ta = document.getElementById('draft-text');
+  if (!ta) return;
+  var done = function () { var c = document.getElementById('copied'); if (c) c.textContent = 'Copiata'; if (url) window.open(url, '_blank', 'noopener'); };
+  if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(ta.value).then(done, function () { ta.select(); document.execCommand('copy'); done(); });
+  else { ta.select(); document.execCommand('copy'); done(); }
+}
+</script>
 <%- include('_bottom') %>

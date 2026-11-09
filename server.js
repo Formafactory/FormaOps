@@ -17,6 +17,7 @@ const { syncGmail, gmailConfig, testConnection } = require('./lib/sync-gmail');
 const { syncMeta, metaConfig, testConnection: testMeta, testInstagramToken, tokenScopes } = require('./lib/sync-meta');
 const M = require('./lib/messages');
 const I = require('./lib/inbox');
+const A = require('./lib/ai');
 const { normalizeEmail } = require('./lib/normalize');
 const { runBackup, listBackups } = require('./lib/backup');
 const { createScheduler, createDailyScheduler } = require('./lib/scheduler');
@@ -154,6 +155,11 @@ app.get('/', (req, res) => {
   const brand = res.locals.brand;
   const show = ['rimandate', 'chiuse', 'arretrate'].includes(req.query.mostra) ? req.query.mostra : 'recenti';
   const r = I.regia(db, { brand, show });
+  // Bozza dell'AI per la conversazione principale di ogni scheda (se c'è ed è aggiornata).
+  for (const g of r.perTe) {
+    const d = A.draftFor(db, g.thread_key);
+    g.draft = d && !A.isStale(d, g) ? d : null;
+  }
   const si = syncInfo();
   const errors = [];
   if (brand === 'vir3d' && si.state.last_error) errors.push(`Ordini: ${si.state.last_error}`);
@@ -176,7 +182,12 @@ app.get('/conversazione', (req, res) => {
   const summary = t.customer_id ? I.customerSummary(db, t.customer_id) : null;
   const back = safeBack(req.query.da, '/');
   const here = '/conversazione?k=' + encodeURIComponent(t.thread_key) + '&da=' + encodeURIComponent(back);
-  res.render('thread', { t, summary, back, here, flash: req.query.ok ?? null });
+  const draft = A.draftFor(db, t.thread_key);
+  const ai = A.aiConfig(db);
+  res.render('thread', {
+    t, summary, back, here, flash: req.query.ok ?? null, aiError: req.query.errore ?? null,
+    draft, draftStale: draft ? A.isStale(draft, t) : false, aiReady: Boolean(ai.key && ai.model),
+  });
 });
 
 function safeBack(url, fallback) {
@@ -185,6 +196,55 @@ function safeBack(url, fallback) {
 }
 
 const ACTION_DONE = { chiudi: 'Conversazione chiusa.', rimanda: 'Conversazione rimandata.', attesa: 'Segnata come risposta: in attesa del cliente.', riapri: 'Conversazione riaperta.' };
+// Prepara (o rigenera, con un'indicazione facoltativa) la bozza dell'AI per una conversazione.
+app.post('/conversazioni/bozza', async (req, res) => {
+  const k = String(req.body.k ?? '');
+  const back = safeBack(req.body.da, '/');
+  const to = '/conversazione?k=' + encodeURIComponent(k) + '&da=' + encodeURIComponent(back);
+  try {
+    await A.generateDraft(db, k, { instruction: String(req.body.indicazione ?? '').trim().slice(0, 500) || undefined });
+    res.redirect(to + '&ok=' + encodeURIComponent('Bozza pronta: controllala prima di inviarla.') + '#bozza');
+  } catch (err) {
+    res.redirect(to + '&errore=' + encodeURIComponent(err.message) + '#bozza');
+  }
+});
+
+// ASSISTENTE AI: conoscenze e voce del brand attivo, consumi.
+app.get('/assistente', (req, res) => {
+  const brand = res.locals.brand;
+  const cfg = A.aiConfig(db);
+  res.render('assistant', {
+    k: A.knowledge(db, brand), cfg: { ready: Boolean(cfg.key && cfg.model), model: cfg.model, auto: cfg.auto, dailyMax: cfg.dailyMax },
+    usage: A.usageThisMonth(db), today: A.callsToday(db), lastError: getSetting(db, 'ai_last_error') || '',
+    msg: req.query.msg ?? null, ok: req.query.ok === '1',
+  });
+});
+app.post('/assistente', (req, res) => {
+  A.saveKnowledge(db, res.locals.brand, { content: req.body.content, voice: req.body.voice });
+  res.redirect('/assistente?ok=1&msg=' + encodeURIComponent('Conoscenze salvate: le prossime bozze le useranno.'));
+});
+app.post('/assistente/ripristina', (req, res) => {
+  db.prepare('DELETE FROM knowledge WHERE brand = ?').run(res.locals.brand);
+  res.redirect('/assistente?ok=1&msg=' + encodeURIComponent('Ripristinato il testo di partenza.'));
+});
+
+app.post('/impostazioni/ai', async (req, res) => {
+  const key = String(req.body.key ?? '').trim();
+  if (key) setSetting(db, 'openai_key', key);
+  if (req.body.model !== undefined) setSetting(db, 'openai_model', String(req.body.model).trim());
+  setSetting(db, 'ai_auto', req.body.auto ? '1' : '0');
+  if (req.body.daily) setSetting(db, 'ai_daily_max', String(Math.min(Math.max(Number(req.body.daily) || 40, 1), 500)));
+  try {
+    const models = await A.listModels(A.aiConfig(db));
+    setSetting(db, 'openai_models', JSON.stringify(models.slice(0, 40)));
+    if (!getSetting(db, 'openai_model') && models.length) setSetting(db, 'openai_model', models[0]);
+    res.redirect('/impostazioni?ok=1&msg=' + encodeURIComponent(
+      `OpenAI collegato. Modello: ${getSetting(db, 'openai_model')}. Le bozze si preparano al prossimo aggiornamento.`) + '#ai');
+  } catch (err) {
+    res.redirect('/impostazioni?msg=' + encodeURIComponent(err.message) + '#ai');
+  }
+});
+
 app.post('/conversazioni/chiudi-arretrate', (req, res) => {
   const n = I.closeArretrate(db, res.locals.brand);
   res.redirect('/?mostra=chiuse&ok=' + encodeURIComponent(`${n} conversazioni arretrate chiuse. Se qualcuno riscrive, torna in "Per te".`));
@@ -240,6 +300,10 @@ async function syncAll() {
         : `Errore Facebook/Instagram: ${r.error}`);
   }
   if (!parts.length) parts.push('Errore: nessun canale collegato. Vai in Impostazioni.');
+  // Bozze dell'AI per le nuove conversazioni in "Per te" (solo bozze: non si invia nulla).
+  const ai = await A.autoDrafts(db, { log: console.log });
+  if (ai.made) parts.push(`Bozze AI: ${ai.made} pronte`);
+  if (ai.error) parts.push(`Errore bozze AI: ${ai.error}`);
   return parts.join(' · ');
 }
 // Backup: cartella scelta in Impostazioni (es. Google Drive), altrimenti DATA_DIR/backup. Uno al giorno.
@@ -393,6 +457,8 @@ app.get('/impostazioni', (req, res) => {
     metaScopes: JSON.parse(getSetting(db, 'meta_scopes') || 'null'),
     urgency: I.urgencyHours(db),
     perTeDays: I.perTeDays(db),
+    ai: (() => { const c = A.aiConfig(db); return { hasKey: Boolean(c.key), model: c.model, auto: c.auto, dailyMax: c.dailyMax,
+      models: JSON.parse(getSetting(db, 'openai_models') || '[]') }; })(),
     msg: req.query.msg ?? null, ok: req.query.ok === '1',
   });
 });

@@ -1,0 +1,39 @@
+<%- include('_top', { title: 'Assistente AI', section: 'assistente' }) %>
+<header class="page-head">
+  <div>
+    <h1>Assistente AI</h1>
+    <p>Per ogni conversazione in "Per te" l'AI prepara una bozza di risposta. Tu la controlli, la copi e la invii dal canale: l'AI non invia mai nulla da sola
+      e non scrive per i contatti personali. Qui decidi cosa sa di <%= SPACES[brand].label %> e con che voce scrive.</p>
+  </div>
+</header>
+<% if (msg) { %><p class="<%= ok ? 'ok' : 'error' %>"><%= msg %></p><% } %>
+
+<section class="card">
+  <h2>Stato</h2>
+  <% if (!cfg.ready) { %>
+    <p class="small" style="margin: 0">Non ancora collegato: inserisci la chiave OpenAI in <a href="/impostazioni#ai">Impostazioni → Assistente AI</a>.</p>
+  <% } else { %>
+    <dl class="facts">
+      <dt>Modello</dt><dd><%= cfg.model %></dd>
+      <dt>Bozze automatiche</dt><dd><%= cfg.auto ? 'sì, dopo ogni aggiornamento, al massimo ' + cfg.dailyMax + ' al giorno' : 'spente: le prepari tu dalla conversazione' %></dd>
+      <dt>Oggi</dt><dd><%= today %> <%= today === 1 ? 'bozza' : 'bozze' %></dd>
+      <dt>Questo mese</dt><dd><%= usage.ok %> bozze, <%= (usage.tokens_in + usage.tokens_out).toLocaleString('it-IT') %> token (il costo esatto lo vedi su platform.openai.com → Usage)</dd>
+    </dl>
+    <% if (lastError) { %><p class="error small" style="margin-top: 12px">Ultimo errore: <%= lastError %></p><% } %>
+  <% } %>
+</section>
+
+<form class="card knowledge form" method="post" action="/assistente" style="max-width: none">
+  <h2>Conoscenze di <%= SPACES[brand].label %></h2>
+  <p class="small muted" style="margin: 0">L'AI usa solo quello che c'è scritto qui (più ordini e storico del cliente). Prezzi, tempi, politiche, cosa non promettere.
+    <% if (!k.custom) { %>È il testo di partenza ricavato dal sito: correggilo e salva.<% } else { %>Ultima modifica: <%= when(k.updatedAt) %>.<% } %></p>
+  <label>Conoscenze
+    <textarea name="content" rows="22"><%= k.content %></textarea></label>
+  <label>Voce e firma
+    <textarea name="voice" rows="4"><%= k.voice %></textarea></label>
+  <div class="actions">
+    <button type="submit">Salva</button>
+    <% if (k.custom) { %><button type="submit" formaction="/assistente/ripristina" class="secondary">Ripristina il testo di partenza</button><% } %>
+  </div>
+</form>
+<%- include('_bottom') %>
