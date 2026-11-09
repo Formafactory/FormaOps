@@ -42,7 +42,7 @@
           <div><span class="reason reason-<%= t.reason.kind %>"><%= t.reason.label %></span></div>
           <p class="snip"><%= t.snippet || t.subject %></p>
           <% if (t.draft) { %>
-            <a class="draft-peek" href="<%= link %>#bozza"><strong>Bozza pronta</strong> <%= t.draft.draft.replace(/\s+/g, ' ').slice(0, 160) %><%= t.draft.draft.length > 160 ? '…' : '' %></a>
+            <a class="draft-peek" href="<%= link %>#bozza"><strong><%= t.draft.draft.includes('[DA COMPLETARE:') ? 'Bozza da verificare' : 'Bozza pronta' %></strong> <%= t.draft.draft.replace(/\s+/g, ' ').slice(0, 160) %><%= t.draft.draft.length > 160 ? '…' : '' %></a>
           <% } %>
           <% if (t.others.length) { %>
             <div class="also">Anche <%= t.others.length === 1 ? 'un\'altra conversazione' : t.others.length + ' altre conversazioni' %>:
@@ -73,10 +73,8 @@
             </details>
             <% if (t.draft) { %>
               <a class="btn" href="<%= link %>#bozza">Rivedi bozza</a>
-            <% } else if (t.link) { %>
-              <a class="btn" href="<%= t.link %>" target="_blank" rel="noopener">Rispondi</a>
             <% } else { %>
-              <a class="btn" href="<%= link %>">Apri</a>
+              <a class="btn" href="<%= link %>#bozza">Prepara bozza</a>
             <% } %>
           </div>
         </div>
