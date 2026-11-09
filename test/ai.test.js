@@ -173,3 +173,19 @@ test('commento su ambigramma: rifiuta Mini-Me, foto e prezzi estranei al prodott
   assert.equal(A.guardCommentDraft(t, 'Per l\'ambigramma non è prevista un\'anteprima personalizzata prima dell\'ordine.', k),
     'Per l\'ambigramma non è prevista un\'anteprima personalizzata prima dell\'ordine.');
 });
+
+
+test('commento ambiguo: blocca la deviazione generica ai DM, ma permette la privacy per ordini', () => {
+  const t = {
+    source: 'instagram_comment', brand: 'vir3d',
+    subject: "Commento al post: Un regalo speciale",
+    messages: [{ direction: 'in', snippet: 'RAQUEL LUCA' }],
+  };
+  assert.match(A.guardCommentDraft(t, 'Ciao! Scrivici in privato, così vediamo insieme 😊', ''),
+    /\[DA COMPLETARE:/);
+  assert.match(A.guardCommentDraft(t, 'Ciao! Per realizzare le statuine scrivici con qualche foto.', ''),
+    /\[DA COMPLETARE:/);
+  const order = { ...t, messages: [{ direction: 'in', snippet: 'Il mio ordine non arriva' }] };
+  assert.equal(A.guardCommentDraft(order, 'Scrivici in privato con il numero di ordine.', ''),
+    'Scrivici in privato con il numero di ordine.');
+});
