@@ -69,7 +69,8 @@
         <p class="small muted" style="margin: 0">L'assistente AI non è ancora collegato. <a href="/impostazioni#ai">Collegalo in Impostazioni</a>.</p>
       <% } else { %>
         <% if (draft) { %>
-          <% if (draftStale) { %><p class="warn small">Il cliente ha scritto dopo questa bozza: rigenerala per tenerne conto.</p><% } %>
+          <% if (draftStale) { %><p class="warn small">Bozza da rigenerare: sono cambiate le informazioni disponibili oppure il cliente ha scritto un nuovo messaggio.</p><% } %>
+          <% if (draft.draft.includes('[DA COMPLETARE:')) { %><p class="warn small">Questa bozza contiene informazioni da verificare: non inviarla senza completarle.</p><% } %>
           <label class="sr-only" for="draft-text">Testo della bozza</label>
           <textarea id="draft-text" rows="<%= Math.min(18, Math.max(6, draft.draft.split('\n').length + Math.ceil(draft.draft.length / 90))) %>"><%= draft.draft %></textarea>
           <div class="actions">
