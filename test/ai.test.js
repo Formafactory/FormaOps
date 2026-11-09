@@ -255,3 +255,35 @@ test('regola commerciale Vir3D: ambigramma generico = Premium, EcoGreen soltanto
   assert.equal(A.commentProductContext(conflict).variant, null);
   assert.match(A.guardCommentDraft(conflict, "Costa 49,90 €.", knowledge), /\[DA COMPLETARE:/);
 });
+
+
+test('commenti ambigramma: il guard sostituisce i rinvii generici al Direct con il configuratore, senza cambiare prezzi', () => {
+  const k = A.defaultKnowledge('vir3d');
+  const base = {
+    source: 'facebook_comment', brand: 'vir3d',
+    subject: "Commento all'inserzione: ⚠️ Riesci a leggerlo al contrario? 👀 Non è solo …",
+    messages: [{ direction: 'in', snippet: 'Anna e Pasquale, quanto costa?' }],
+  };
+  const examples = [
+    "Ciao! L'Ambigramma Premium costa 49,90 €. Scrivici in Direct per tutti i dettagli e per l'ordine 😊",
+    "Ciao! Per l'ambigramma Premium non c'è anteprima prima dell'ordine. Se vuoi, scrivici in privato per dettagli!",
+    "Ciao! Per l'ambigramma Premium puoi scegliere il colore. Se vuoi, scrivi in Direct per ordini!",
+    "Ciao! L'ambigramma Premium si personalizza con due nomi. Se vuoi, possiamo aiutarti in privato per maggiori dettagli.",
+  ];
+  for (const text of examples) {
+    const out = A.guardCommentDraft(base, text, k);
+    assert.match(out, /https:\/\/vir3d\.it\/products\/ambigramma-premium/, text);
+    assert.doesNotMatch(out, /scriv\w* in (?:privato|direct)|possiamo aiutarti in privato/i, text);
+    assert.doesNotMatch(out, /\[DA COMPLETARE:/, text);
+  }
+  const priced = A.guardCommentDraft(base, examples[0], k);
+  assert.match(priced, /49,90 €/);
+  const personal = { ...base, messages: [{ direction: 'in', snippet: 'Il mio ordine non arriva, puoi scrivermi in privato?' }] };
+  const privateReply = "Ciao! Per il tuo ordine, scrivici in privato con il numero di ordine.";
+  assert.equal(A.guardCommentDraft(personal, privateReply, k), privateReply);
+  const eco = { ...base, messages: [{ direction: 'in', snippet: 'Vorrei EcoGreen' }] };
+  const ecoReply = A.guardCommentDraft(eco,
+    "Ciao! L'ambigramma EcoGreen si personalizza con due nomi. Scrivici in Direct per dettagli!", k);
+  assert.match(ecoReply, /https:\/\/vir3d\.it\/products\/ambigramma-ecogreen/);
+  assert.doesNotMatch(ecoReply, /ambigramma-premium/);
+});
