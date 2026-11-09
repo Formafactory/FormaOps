@@ -198,3 +198,24 @@ test('controllo dei permessi della chiave: dice quali mancano', async (t) => {
   assert.deepEqual((await tokenScopes(fake.cfg)).missing, []);
   assert.ok(fake.state.requests.every((q) => q.method === 'GET'));
 });
+
+
+test('il testo esteso del post aggiorna anche commenti esistenti, senza duplicarli', async (t) => {
+  const { fake, db } = await setup(t);
+  const first = await syncMeta(db, { cfg: fake.cfg });
+  assert.equal(first.ok, true, first.error);
+  const key = 'fbcomment:fc4';
+  const previous = one(db, 'SELECT MAX(sent_at) FROM messages WHERE thread_key = ?', key);
+  db.prepare('INSERT INTO ai_drafts (thread_key, draft, model, based_on, created_at) VALUES (?, ?, ?, ?, ?)')
+    .run(key, 'Risposta con vecchio contesto', 'test', previous, new Date().toISOString());
+  const newCaption = 'Ambigramma personalizzato con due nomi: scegli la combinazione e il colore. '
+    + 'Questo contenuto e volutamente piu lungo di cinquanta caratteri.';
+  fake.state.data.posts['P1:published_posts'][0].message = newCaption;
+  const again = await syncMeta(db, { cfg: fake.cfg });
+  assert.equal(again.ok, true, again.error);
+  assert.equal(again.nuovi, 0, 'il contesto aggiornato non conta come nuovo messaggio');
+  assert.equal(one(db, 'SELECT subject FROM messages WHERE id = ?', 'fbcomment:fc4'),
+    'Commento al post: ' + newCaption);
+  assert.equal(one(db, 'SELECT based_on FROM ai_drafts WHERE thread_key = ?', key), '',
+    'la vecchia bozza rimane conservata ma va rigenerata');
+});
